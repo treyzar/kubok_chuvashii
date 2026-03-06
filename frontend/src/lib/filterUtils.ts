@@ -1,12 +1,6 @@
-/**
- * Filter utilities for managing filter state and URL parameters
- */
 
-/**
- * Check if a filter value is considered "active" (non-default)
- * @param value - Filter value to check
- * @returns true if the filter is active (has a non-default value)
- */
+
+
 export function isFilterActive(value: any): boolean {
   if (value === null || value === undefined || value === '') {
     return false;
@@ -23,29 +17,17 @@ export function isFilterActive(value: any): boolean {
   return true;
 }
 
-/**
- * Count the number of active filters in a filter object
- * @param filters - Object containing filter values
- * @returns Number of active filters
- */
+
 export function countActiveFilters(filters: Record<string, any>): number {
   return Object.values(filters).filter(isFilterActive).length;
 }
 
-/**
- * Check if any filters are active
- * @param filters - Object containing filter values
- * @returns true if at least one filter is active
- */
+
 export function hasActiveFilters(filters: Record<string, any>): boolean {
   return countActiveFilters(filters) > 0;
 }
 
-/**
- * Serialize filter value for URL parameter
- * @param value - Filter value to serialize
- * @returns Serialized string value or null
- */
+
 export function serializeFilterValue(value: any): string | null {
   if (!isFilterActive(value)) {
     return null;
@@ -64,18 +46,13 @@ export function serializeFilterValue(value: any): string | null {
   }
   
   if (value instanceof Date) {
-    return value.toISOString().split('T')[0]; // YYYY-MM-DD
+    return value.toISOString().split('T')[0]; 
   }
   
   return String(value);
 }
 
-/**
- * Deserialize filter value from URL parameter
- * @param value - URL parameter value
- * @param type - Expected type ('string', 'number', 'boolean', 'date')
- * @returns Deserialized value
- */
+
 export function deserializeFilterValue(
   value: string | null,
   type: 'string' | 'number' | 'boolean' | 'date' = 'string'
@@ -106,11 +83,7 @@ export function deserializeFilterValue(
   }
 }
 
-/**
- * Build URL search params from filter object
- * @param filters - Object containing filter values
- * @returns URLSearchParams object
- */
+
 export function buildSearchParams(filters: Record<string, any>): URLSearchParams {
   const params = new URLSearchParams();
   
@@ -124,12 +97,7 @@ export function buildSearchParams(filters: Record<string, any>): URLSearchParams
   return params;
 }
 
-/**
- * Parse filters from URL search params
- * @param searchParams - URLSearchParams object
- * @param schema - Schema defining expected filter types
- * @returns Object containing parsed filter values
- */
+
 export function parseSearchParams(
   searchParams: URLSearchParams,
   schema: Record<string, 'string' | 'number' | 'boolean' | 'date'>
@@ -146,30 +114,21 @@ export function parseSearchParams(
   return filters;
 }
 
-/**
- * Sanitize filter value to prevent XSS and injection attacks
- * @param value - Filter value to sanitize
- * @returns Sanitized value
- */
+
 export function sanitizeFilterValue(value: any): any {
   if (typeof value !== 'string') {
     return value;
   }
   
-  // Remove potentially dangerous characters
+  
   return value
-    .replace(/[<>]/g, '') // Remove angle brackets
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, '') // Remove event handlers
+    .replace(/[<>]/g, '') 
+    .replace(/javascript:/gi, '') 
+    .replace(/on\w+=/gi, '') 
     .trim();
 }
 
-/**
- * Validate filter values against constraints
- * @param filters - Object containing filter values
- * @param constraints - Object defining validation rules
- * @returns Object with validation results
- */
+
 export function validateFilters(
   filters: Record<string, any>,
   constraints: Record<string, (value: any) => boolean>
@@ -189,11 +148,7 @@ export function validateFilters(
   };
 }
 
-/**
- * Merge filter objects, with later objects taking precedence
- * @param filters - Array of filter objects to merge
- * @returns Merged filter object
- */
+
 export function mergeFilters(...filters: Record<string, any>[]): Record<string, any> {
   return filters.reduce((acc, curr) => {
     Object.entries(curr).forEach(([key, value]) => {
@@ -205,21 +160,12 @@ export function mergeFilters(...filters: Record<string, any>[]): Record<string, 
   }, {});
 }
 
-/**
- * Reset filters to default values
- * @param defaults - Object containing default filter values
- * @returns Object with default values
- */
+
 export function resetFilters(defaults: Record<string, any> = {}): Record<string, any> {
   return { ...defaults };
 }
 
-/**
- * Compare two filter objects for equality
- * @param filters1 - First filter object
- * @param filters2 - Second filter object
- * @returns true if filters are equal
- */
+
 export function areFiltersEqual(
   filters1: Record<string, any>,
   filters2: Record<string, any>

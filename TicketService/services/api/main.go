@@ -26,8 +26,11 @@ func main() {
 
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "X-User-ID"}
 	r.Use(cors.New(corsConfig))
+
+	
+	r.Use(internal.AuthMiddleware(repo))
 
 	apiGroup := r.Group("/api/v1")
 	humaConfig := huma.DefaultConfig(
@@ -45,6 +48,18 @@ func main() {
 }
 
 func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, redisClient *redis.Client, appConfig *internal.AppConfig) {
+	
+	authHandler := handlers.AuthHandler{Repo: repo, Pool: pool}
+	{
+		huma.Register(api, huma.Operation{
+			OperationID: "login",
+			Method:      http.MethodPost,
+			Path:        "/auth/login",
+			Description: "Login with email and password",
+			Tags:        []string{"Auth"},
+		}, authHandler.Login)
+	}
+
 	categoryHandler := handlers.CategoryHandler{Repo: repo}
 	{
 		huma.Register(api, huma.Operation{
@@ -54,13 +69,53 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 			Description: "Get a tree of categories and subcategories",
 			Tags:        []string{"Categories"},
 		}, categoryHandler.Get)
+
+		huma.Register(api, huma.Operation{
+			OperationID: "create-category",
+			Method:      http.MethodPost,
+			Path:        "/admin/categories",
+			Description: "Create a new category",
+			Tags:        []string{"Admin"},
+		}, categoryHandler.CreateCategory)
+
+		huma.Register(api, huma.Operation{
+			OperationID: "create-subcategory",
+			Method:      http.MethodPost,
+			Path:        "/admin/categories/{id}/subcategories",
+			Description: "Create a subcategory under a category",
+			Tags:        []string{"Admin"},
+		}, categoryHandler.CreateSubcategory)
+
+		huma.Register(api, huma.Operation{
+			OperationID: "get-tags",
+			Method:      http.MethodGet,
+			Path:        "/admin/tags",
+			Description: "Get all tags",
+			Tags:        []string{"Admin"},
+		}, categoryHandler.GetTags)
+
+		huma.Register(api, huma.Operation{
+			OperationID: "create-tag",
+			Method:      http.MethodPost,
+			Path:        "/admin/tags",
+			Description: "Create a new internal tag",
+			Tags:        []string{"Admin"},
+		}, categoryHandler.CreateTag)
+
+		huma.Register(api, huma.Operation{
+			OperationID: "get-departments",
+			Method:      http.MethodGet,
+			Path:        "/admin/departments",
+			Description: "Get all departments",
+			Tags:        []string{"Admin"},
+		}, categoryHandler.GetDepartments)
 	}
 
 	ticketHandler := handlers.TicketHandler{Repo: repo, Pool: pool}
 
-	// Ticket Routes
+	
 	{
-		// Create
+		
 		huma.Register(api, huma.Operation{
 			OperationID: "create-ticket",
 			Method:      http.MethodPost,
@@ -69,7 +124,7 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 			Tags:        []string{"Tickets"},
 		}, ticketHandler.Post)
 
-		// Read
+		
 		huma.Register(api, huma.Operation{
 			OperationID: "get-ticket",
 			Method:      http.MethodGet,
@@ -86,7 +141,7 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 			Tags:        []string{"Tickets"},
 		}, ticketHandler.List)
 
-		// Update
+		
 		huma.Register(api, huma.Operation{
 			OperationID: "update-ticket",
 			Method:      http.MethodPatch,
@@ -103,7 +158,15 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 			Tags:        []string{"Tickets"},
 		}, ticketHandler.Delete)
 
-		// Merge
+		huma.Register(api, huma.Operation{
+			OperationID: "hide-ticket",
+			Method:      http.MethodPost,
+			Path:        "/tickets/{id}/hide",
+			Description: "Hide a ticket from public view",
+			Tags:        []string{"Tickets"},
+		}, ticketHandler.Hide)
+
+		
 		huma.Register(api, huma.Operation{
 			OperationID: "merge-duplicates",
 			Method:      http.MethodPost,
@@ -138,7 +201,7 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 		}, statisticsHandler.GetDynamics)
 	}
 
-	// History Routes
+	
 	historyHandler := handlers.HistoryHandler{Repo: repo, Pool: pool}
 	{
 		huma.Register(api, huma.Operation{
@@ -158,7 +221,7 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 		}, historyHandler.GetRecentHistory)
 	}
 
-	// Comments Routes
+	
 	commentsHandler := handlers.CommentsHandler{Repo: repo, Pool: pool}
 	{
 		huma.Register(api, huma.Operation{
@@ -178,7 +241,7 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 		}, commentsHandler.Get)
 	}
 
-	// Heatmap Routes
+	
 	heatmapHandler := handlers.HeatmapHandler{Repo: repo, Pool: pool}
 	{
 		huma.Register(api, huma.Operation{
@@ -198,7 +261,7 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 		}, heatmapHandler.GetStats)
 	}
 
-	// Monitoring Routes
+	
 	monitoringHandler := handlers.MonitoringHandler{Repo: repo}
 	{
 		huma.Register(api, huma.Operation{
@@ -226,7 +289,7 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 		}, monitoringHandler.GetKPI)
 	}
 
-	// Admin Routes
+	
 	adminUsersHandler := handlers.AdminUsersHandler{Repo: repo, Pool: pool}
 	{
 		huma.Register(api, huma.Operation{

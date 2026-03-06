@@ -7,9 +7,10 @@ INSERT INTO users (
     department_id,
     first_name,
     last_name,
-    middle_name
+    middle_name,
+    password_hash
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 ) RETURNING *;
 
 -- name: GetUser :one
@@ -48,6 +49,10 @@ SET
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
+
+-- name: GetUserByEmail :one
+SELECT * FROM users
+WHERE email = $1 AND status = 'active';
 
 -- name: DeleteUser :one
 DELETE FROM users

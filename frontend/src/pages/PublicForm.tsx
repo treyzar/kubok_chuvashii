@@ -6,13 +6,36 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { UploadCloud, CheckCircle2, MapPin, AlertCircle, ArrowRight, LocateFixed } from "lucide-react"
+import { CheckCircle2, MapPin, AlertCircle, ArrowRight } from "lucide-react"
 import { motion } from "motion/react"
 
 import { fetchCategories, createTicket, Category } from "@/api/tickets"
 
-// Will use dynamic categories instead of hardcoded
-// const CATEGORIES = { ... };
+
+const validatePhone = (phone: string): boolean => {
+  const cleaned = phone.replace(/\D/g, '')
+  return cleaned.length === 11 && cleaned.startsWith('7')
+}
+
+const validateEmail = (email: string): boolean => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return re.test(email)
+}
+
+const validateName = (name: string): boolean => {
+  return name.trim().length >= 3 && /^[а-яА-ЯёЁa-zA-Z\s-]+$/.test(name)
+}
+
+
+const formatPhone = (value: string): string => {
+  const cleaned = value.replace(/\D/g, '')
+  if (cleaned.length === 0) return ''
+  if (cleaned.length <= 1) return `+${cleaned}`
+  if (cleaned.length <= 4) return `+${cleaned.slice(0, 1)} (${cleaned.slice(1)}`
+  if (cleaned.length <= 7) return `+${cleaned.slice(0, 1)} (${cleaned.slice(1, 4)}) ${cleaned.slice(4)}`
+  if (cleaned.length <= 9) return `+${cleaned.slice(0, 1)} (${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`
+  return `+${cleaned.slice(0, 1)} (${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7, 9)}-${cleaned.slice(9, 11)}`
+}
 
 export default function PublicForm() {
   const navigate = useNavigate()
@@ -22,13 +45,14 @@ export default function PublicForm() {
   const [subcategoryId, setSubcategoryId] = useState("")
 
   const [address, setAddress] = useState("")
-  const [latitude, setLatitude] = useState<number | "">("")
-  const [longitude, setLongitude] = useState<number | "">("")
-  const [isLocating, setIsLocating] = useState(false)
   const [description, setDescription] = useState("")
   const [senderName, setSenderName] = useState("")
   const [senderPhone, setSenderPhone] = useState("")
   const [senderEmail, setSenderEmail] = useState("")
+  
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  
   const [isLoading, setIsLoading] = useState(false)
   const [ticketNumber, setTicketNumber] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -37,45 +61,132 @@ export default function PublicForm() {
     fetchCategories().then(setCategoryTree).catch(console.error)
   }, [])
 
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Геолокация не поддерживается вашим браузером")
-      return
+  const handlePhoneChange = (value: string) => {
+    const formatted = formatPhone(value)
+    setSenderPhone(formatted)
+    if (touched.senderPhone) {
+      validateField('senderPhone', formatted)
     }
+  }
 
-    setIsLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude)
-        setLongitude(position.coords.longitude)
-        setIsLocating(false)
-      },
-      (error) => {
-        console.error("Ошибка получения геолокации", error)
-        alert("Не удалось определить местоположение. Пожалуйста, разрешите доступ к геоданным.")
-        setIsLocating(false)
-      }
-    )
+  const validateField = (field: string, value: string) => {
+    const newErrors = { ...errors }
+    
+    switch (field) {
+      case 'address':
+        if (!value.trim()) {
+          newErrors.address = 'Укажите адрес'
+        } else if (value.trim().length < 10) {
+          newErrors.address = 'Адрес слишком короткий (минимум 10 символов)'
+        } else {
+          delete newErrors.address
+        }
+        break
+      case 'description':
+        if (!value.trim()) {
+          newErrors.description = 'Опишите проблему'
+        } else if (value.trim().length < 20) {
+          newErrors.description = 'Описание слишком короткое (минимум 20 символов)'
+        } else {
+          delete newErrors.description
+        }
+        break
+      case 'senderName':
+        if (!isAnonymous) {
+          if (!value.trim()) {
+            newErrors.senderName = 'Введите ФИО'
+          } else if (!validateName(value)) {
+            newErrors.senderName = 'ФИО должно содержать минимум 3 символа и только буквы'
+          } else {
+            delete newErrors.senderName
+          }
+        } else {
+          delete newErrors.senderName
+        }
+        break
+      case 'senderPhone':
+        if (!isAnonymous) {
+          if (!value.trim()) {
+            newErrors.senderPhone = 'Введите телефон'
+          } else if (!validatePhone(value)) {
+            newErrors.senderPhone = 'Неверный формат телефона'
+          } else {
+            delete newErrors.senderPhone
+          }
+        } else {
+          delete newErrors.senderPhone
+        }
+        break
+      case 'senderEmail':
+        if (value.trim() && !validateEmail(value)) {
+          newErrors.senderEmail = 'Неверный формат email'
+        } else {
+          delete newErrors.senderEmail
+        }
+        break
+    }
+    
+    setErrors(newErrors)
+  }
+
+  const handleBlur = (field: string) => {
+    setTouched({ ...touched, [field]: true })
+    const value = field === 'address' ? address :
+                  field === 'description' ? description :
+                  field === 'senderName' ? senderName :
+                  field === 'senderPhone' ? senderPhone :
+                  field === 'senderEmail' ? senderEmail : ''
+    validateField(field, value)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (latitude === "" || longitude === "") {
-      alert("Пожалуйста, поделитесь вашей геолокацией перед отправкой (кнопка 'Определить мое местоположение').")
+    
+    setTouched({
+      address: true,
+      description: true,
+      senderName: true,
+      senderPhone: true,
+      senderEmail: true,
+    })
+
+    
+    validateField('address', address)
+    validateField('description', description)
+    if (!isAnonymous) {
+      validateField('senderName', senderName)
+      validateField('senderPhone', senderPhone)
+      validateField('senderEmail', senderEmail)
+    }
+
+    
+    if (Object.keys(errors).length > 0) {
+      return
+    }
+
+    if (!subcategoryId) {
+      alert('Пожалуйста, выберите категорию и подкатегорию')
+      return
+    }
+
+    if (!address.trim()) {
+      alert('Пожалуйста, укажите адрес')
       return
     }
 
     setIsLoading(true)
 
     try {
+      
+      
       const payload = {
-        description,
+        description: `${description}\n\nАдрес: ${address}`,
         sender_name: isAnonymous ? "Анонимный заявитель" : senderName,
-        sender_phone: isAnonymous ? undefined : senderPhone,
+        sender_phone: isAnonymous ? undefined : senderPhone.replace(/\D/g, ''),
         sender_email: isAnonymous ? undefined : senderEmail,
-        longitude: Number(longitude),
-        latitude: Number(latitude),
+        longitude: 47.2357, 
+        latitude: 56.1326,
         subcategory_id: parseInt(subcategoryId, 10),
       }
 
@@ -123,8 +234,13 @@ export default function PublicForm() {
                 setIsSubmitted(false)
                 setDescription("")
                 setAddress("")
-                setLatitude("")
-                setLongitude("")
+                setSenderName("")
+                setSenderPhone("")
+                setSenderEmail("")
+                setCategoryId("")
+                setSubcategoryId("")
+                setErrors({})
+                setTouched({})
               }} className="w-full h-12 text-base rounded-xl mb-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 transition-all">
                 Отправить еще одно
               </Button>
@@ -140,9 +256,9 @@ export default function PublicForm() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-white">
-      {/* Left Panel - Hero / Branding */}
+      {}
       <div className="relative lg:w-5/12 bg-slate-950 text-white overflow-hidden flex flex-col justify-between p-8 lg:p-16">
-        {/* Abstract Background Elements */}
+        {}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
           <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-600/20 blur-[120px] mix-blend-screen animate-float"></div>
           <div className="absolute top-[40%] -right-[20%] w-[60%] h-[60%] rounded-full bg-indigo-600/20 blur-[100px] mix-blend-screen animate-float-delayed"></div>
@@ -195,7 +311,7 @@ export default function PublicForm() {
         </div>
       </div>
 
-      {/* Right Panel - Form */}
+      {}
       <div className="lg:w-7/12 flex items-center justify-center p-6 lg:p-12 bg-slate-50/50 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
           <div className="absolute top-[10%] right-[10%] w-[30%] h-[30%] rounded-full bg-blue-400/5 blur-[100px] animate-float"></div>
@@ -215,7 +331,7 @@ export default function PublicForm() {
               </CardHeader>
               <CardContent className="p-8 space-y-8">
 
-                {/* Category Selection */}
+                {}
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div className="space-y-3">
                     <label className="text-sm font-semibold text-slate-700">Категория <span className="text-red-500">*</span></label>
@@ -253,68 +369,57 @@ export default function PublicForm() {
                   </div>
                 </div>
 
-                {/* Geolocation */}
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <label className="text-sm font-semibold text-slate-700">Местоположение <span className="text-red-500">*</span></label>
-                    {latitude !== "" && longitude !== "" ? (
-                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Координаты определены: {Number(latitude).toFixed(5)}, {Number(longitude).toFixed(5)}</span>
-                        </div>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => { setLatitude(""); setLongitude(""); }} className="h-8 hover:bg-emerald-100 text-emerald-800 rounded-lg">
-                          Сбросить
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleGetLocation}
-                        disabled={isLocating}
-                        className="w-full h-12 rounded-xl text-blue-600 border-blue-200 hover:bg-blue-50 transition-colors bg-blue-50/50"
-                      >
-                        <LocateFixed className="w-5 h-5 mr-2" />
-                        {isLocating ? "Определение..." : "Определить мое местоположение"}
-                      </Button>
-                    )}
-                  </div>
+                {}
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-slate-700">Адрес <span className="text-red-500">*</span></label>
+                  <Input
+                    placeholder="г. Чебоксары, ул. Ленина, д. 1"
+                    value={address}
+                    onChange={(e) => {
+                      setAddress(e.target.value)
+                      if (touched.address) validateField('address', e.target.value)
+                    }}
+                    onBlur={() => handleBlur('address')}
+                    className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-colors ${
+                      touched.address && errors.address ? 'border-red-400 focus:border-red-400' : ''
+                    }`}
+                    required
+                  />
+                  {touched.address && errors.address && (
+                    <p className="text-sm text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.address}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-500">Укажите полный адрес: город, улица, дом</p>
                 </div>
 
-                {/* Text */}
+                {}
                 <div className="space-y-3">
                   <label className="text-sm font-semibold text-slate-700">Описание проблемы <span className="text-red-500">*</span></label>
                   <Textarea
                     placeholder="Подробно опишите суть проблемы..."
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="min-h-[140px] rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-colors resize-none p-4"
+                    onChange={(e) => {
+                      setDescription(e.target.value)
+                      if (touched.description) validateField('description', e.target.value)
+                    }}
+                    onBlur={() => handleBlur('description')}
+                    className={`min-h-[140px] rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-colors resize-none p-4 ${
+                      touched.description && errors.description ? 'border-red-400 focus:border-red-400' : ''
+                    }`}
                     required
                   />
+                  {touched.description && errors.description && (
+                    <p className="text-sm text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-500">Минимум 20 символов</p>
                 </div>
 
-                {/* File Upload */}
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold text-slate-700">Фото или видео</label>
-                  <div className="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-slate-200 border-dashed rounded-2xl hover:border-blue-500 hover:bg-blue-50/50 transition-all cursor-pointer bg-slate-50 group">
-                    <div className="space-y-2 text-center">
-                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm group-hover:scale-110 transition-transform">
-                        <UploadCloud className="h-6 w-6 text-blue-500" />
-                      </div>
-                      <div className="flex text-sm text-slate-600 justify-center mt-4">
-                        <label htmlFor="file-upload" className="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                          <span>Выберите файлы</span>
-                          <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple />
-                        </label>
-                        <p className="pl-1">или перетащите их сюда</p>
-                      </div>
-                      <p className="text-xs text-slate-400">PNG, JPG, MP4 до 20MB</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Personal Info Section */}
+                {}
                 <div className="pt-6 border-t border-slate-100">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-semibold text-slate-900">Контактные данные</h3>
@@ -340,15 +445,67 @@ export default function PublicForm() {
                     >
                       <div className="space-y-3 sm:col-span-2">
                         <label className="text-sm font-medium text-slate-700">ФИО <span className="text-red-500">*</span></label>
-                        <Input value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="Иванов Иван Иванович" required={!isAnonymous} className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white" />
+                        <Input 
+                          value={senderName} 
+                          onChange={(e) => {
+                            setSenderName(e.target.value)
+                            if (touched.senderName) validateField('senderName', e.target.value)
+                          }}
+                          onBlur={() => handleBlur('senderName')}
+                          placeholder="Иванов Иван Иванович" 
+                          required={!isAnonymous} 
+                          className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white ${
+                            touched.senderName && errors.senderName ? 'border-red-400 focus:border-red-400' : ''
+                          }`}
+                        />
+                        {touched.senderName && errors.senderName && (
+                          <p className="text-sm text-red-600 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" />
+                            {errors.senderName}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-3">
                         <label className="text-sm font-medium text-slate-700">Телефон <span className="text-red-500">*</span></label>
-                        <Input value={senderPhone} onChange={(e) => setSenderPhone(e.target.value)} type="tel" placeholder="+7 (999) 000-00-00" required={!isAnonymous} className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white" />
+                        <Input 
+                          value={senderPhone} 
+                          onChange={(e) => handlePhoneChange(e.target.value)}
+                          onBlur={() => handleBlur('senderPhone')}
+                          type="tel" 
+                          placeholder="+7 (999) 000-00-00" 
+                          required={!isAnonymous} 
+                          className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white ${
+                            touched.senderPhone && errors.senderPhone ? 'border-red-400 focus:border-red-400' : ''
+                          }`}
+                        />
+                        {touched.senderPhone && errors.senderPhone && (
+                          <p className="text-sm text-red-600 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" />
+                            {errors.senderPhone}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-3">
                         <label className="text-sm font-medium text-slate-700">Email</label>
-                        <Input value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} type="email" placeholder="ivanov@example.com" className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white" />
+                        <Input 
+                          value={senderEmail} 
+                          onChange={(e) => {
+                            setSenderEmail(e.target.value)
+                            if (touched.senderEmail) validateField('senderEmail', e.target.value)
+                          }}
+                          onBlur={() => handleBlur('senderEmail')}
+                          type="email" 
+                          placeholder="ivanov@example.com" 
+                          className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white ${
+                            touched.senderEmail && errors.senderEmail ? 'border-red-400 focus:border-red-400' : ''
+                          }`}
+                        />
+                        {touched.senderEmail && errors.senderEmail && (
+                          <p className="text-sm text-red-600 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" />
+                            {errors.senderEmail}
+                          </p>
+                        )}
                       </div>
                     </motion.div>
                   )}

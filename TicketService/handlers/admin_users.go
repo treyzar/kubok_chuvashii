@@ -3,9 +3,12 @@ package handlers
 import (
 	"context"
 
+	"github.com/SomeSuperCoder/OnlineShop/internal"
 	"github.com/SomeSuperCoder/OnlineShop/repository"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AdminUsersHandler struct {
@@ -13,7 +16,7 @@ type AdminUsersHandler struct {
 	Pool *pgxpool.Pool
 }
 
-// ==================== LIST USERS ====================
+
 
 type ListUsersRequest struct {
 	Role   string `query:"role" enum:"admin,org,executor,"`
@@ -31,9 +34,12 @@ type ListUsersResponse struct {
 }
 
 func (h *AdminUsersHandler) List(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error) {
+	if !internal.IsAdmin(ctx) {
+		return nil, huma.Error403Forbidden("Admin access required")
+	}
 	resp := new(ListUsersResponse)
 
-	// Convert strings to NullUserRole and NullUserStatus
+	
 	var role repository.NullUserRole
 	if req.Role != "" {
 		role.UserRole = repository.UserRole(req.Role)
@@ -77,12 +83,13 @@ func (h *AdminUsersHandler) List(ctx context.Context, req *ListUsersRequest) (*L
 	return resp, nil
 }
 
-// ==================== CREATE USER ====================
+
 
 type CreateUserRequest struct {
 	Body struct {
 		Email        string  `json:"email" format:"email" maxLength:"255"`
 		Role         string  `json:"role" enum:"admin,org,executor"`
+		Password     *string `json:"password,omitempty" minLength:"6" maxLength:"100"`
 		DepartmentID *int32  `json:"department_id,omitempty"`
 		FirstName    *string `json:"first_name,omitempty" maxLength:"100"`
 		LastName     *string `json:"last_name,omitempty" maxLength:"100"`
@@ -95,15 +102,32 @@ type CreateUserResponse struct {
 }
 
 func (h *AdminUsersHandler) Create(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
+	if !internal.IsAdmin(ctx) {
+		return nil, huma.Error403Forbidden("Admin access required")
+	}
 	resp := new(CreateUserResponse)
 
+	
+	var passwordHash *string
+	if req.Body.Password != nil && *req.Body.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(*req.Body.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		hashStr := string(hash)
+		passwordHash = &hashStr
+	}
+
 	user, err := h.Repo.CreateUser(ctx, repository.CreateUserParams{
+		ID:           uuid.New(),
 		Email:        req.Body.Email,
 		Role:         repository.UserRole(req.Body.Role),
+		Status:       repository.UserStatusActive,
 		DepartmentID: req.Body.DepartmentID,
 		FirstName:    req.Body.FirstName,
 		LastName:     req.Body.LastName,
 		MiddleName:   req.Body.MiddleName,
+		PasswordHash: passwordHash,
 	})
 	if err != nil {
 		return nil, err
@@ -114,7 +138,7 @@ func (h *AdminUsersHandler) Create(ctx context.Context, req *CreateUserRequest) 
 	return resp, nil
 }
 
-// ==================== UPDATE USER ====================
+
 
 type UpdateUserRequest struct {
 	UserID uuid.UUID `path:"id"`
@@ -133,9 +157,12 @@ type UpdateUserResponse struct {
 }
 
 func (h *AdminUsersHandler) Update(ctx context.Context, req *UpdateUserRequest) (*UpdateUserResponse, error) {
+	if !internal.IsAdmin(ctx) {
+		return nil, huma.Error403Forbidden("Admin access required")
+	}
 	resp := new(UpdateUserResponse)
 
-	// Convert string pointers to NullUserRole and NullUserStatus
+	
 	var role repository.NullUserRole
 	if req.Body.Role != nil {
 		role.UserRole = repository.UserRole(*req.Body.Role)
@@ -166,7 +193,7 @@ func (h *AdminUsersHandler) Update(ctx context.Context, req *UpdateUserRequest) 
 	return resp, nil
 }
 
-// ==================== DELETE USER ====================
+
 
 type DeleteUserRequest struct {
 	UserID uuid.UUID `path:"id"`
@@ -177,6 +204,9 @@ type DeleteUserResponse struct {
 }
 
 func (h *AdminUsersHandler) Delete(ctx context.Context, req *DeleteUserRequest) (*DeleteUserResponse, error) {
+	if !internal.IsAdmin(ctx) {
+		return nil, huma.Error403Forbidden("Admin access required")
+	}
 	resp := new(DeleteUserResponse)
 
 	user, err := h.Repo.DeleteUser(ctx, repository.DeleteUserParams{

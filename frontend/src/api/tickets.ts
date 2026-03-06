@@ -2,6 +2,25 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8888/api/v1';
 
+
+axios.interceptors.request.use((config) => {
+    try {
+        const authStorage = localStorage.getItem('auth-storage');
+        if (authStorage) {
+            const { state } = JSON.parse(authStorage);
+            if (state?.userId) {
+                config.headers['X-User-ID'] = state.userId;
+                console.log('Adding X-User-ID header:', state.userId); 
+            } else {
+                console.log('No userId in state:', state); 
+            }
+        }
+    } catch (error) {
+        console.error('Failed to add auth header:', error);
+    }
+    return config;
+});
+
 export interface Category {
     category_info: {
         id: number;
@@ -155,6 +174,26 @@ export const getTicketHistory = async (id: string): Promise<HistoryEvent[]> => {
     return response.data.history || [];
 };
 
+export const updateTicket = async (id: string, payload: { status?: string; department_id?: number | null; add_tags?: number[]; remove_tags?: number[] }) => {
+    const response = await axios.patch(`${API_BASE_URL}/tickets/${id}`, payload);
+    return response.data;
+};
+
+export const hideTicket = async (id: string) => {
+    const response = await axios.post(`${API_BASE_URL}/tickets/${id}/hide`);
+    return response.data;
+};
+
+export const deleteTicket = async (id: string) => {
+    const response = await axios.delete(`${API_BASE_URL}/tickets/${id}`);
+    return response.data;
+};
+
+export const postTicketComment = async (id: string, payload: { message: string }) => {
+    const response = await axios.post(`${API_BASE_URL}/tickets/${id}/comments`, payload);
+    return response.data;
+};
+
 export const getStatisticsSummary = async (): Promise<StatisticsSummary> => {
     const response = await axios.get(`${API_BASE_URL}/statistics/summary`);
     return response.data;
@@ -202,7 +241,7 @@ export interface HeatmapStats {
     avg_tickets_per_location: number;
 }
 
-export const getHeatmapPoints = async (params?: { 
+export const getHeatmapPoints = async (params?: {
     period?: 'week' | 'month' | 'year';
     categories?: number[];
 }): Promise<{ points: HeatmapPoint[] }> => {
@@ -212,5 +251,109 @@ export const getHeatmapPoints = async (params?: {
 
 export const getHeatmapStats = async (): Promise<HeatmapStats> => {
     const response = await axios.get(`${API_BASE_URL}/heatmap/stats`);
+    return response.data;
+};
+
+
+
+export interface AdminUser {
+    id: string;
+    email: string;
+    role: 'admin' | 'org' | 'executor';
+    status: 'active' | 'blocked';
+    department_id: number | null;
+    department_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    middle_name?: string | null;
+    created_at: string;
+}
+
+export interface CreateUserPayload {
+    email: string;
+    role: 'admin' | 'org' | 'executor';
+    password?: string;
+    department_id?: number;
+    first_name?: string;
+    last_name?: string;
+    middle_name?: string;
+}
+
+export interface UpdateUserPayload {
+    role?: 'admin' | 'org' | 'executor';
+    status?: 'active' | 'blocked';
+    department_id?: number;
+    first_name?: string;
+    last_name?: string;
+    middle_name?: string;
+}
+
+export const listAdminUsers = async (params?: {
+    role?: string;
+    status?: string;
+    email?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<{ users: AdminUser[]; total: number }> => {
+    const response = await axios.get(`${API_BASE_URL}/admin/users`, { params });
+    return response.data;
+};
+
+export const createAdminUser = async (payload: CreateUserPayload): Promise<AdminUser> => {
+    const response = await axios.post(`${API_BASE_URL}/admin/users`, payload);
+    return response.data;
+};
+
+export const updateAdminUser = async (id: string, payload: UpdateUserPayload): Promise<AdminUser> => {
+    const response = await axios.patch(`${API_BASE_URL}/admin/users/${id}`, payload);
+    return response.data;
+};
+
+export const deleteAdminUser = async (id: string): Promise<AdminUser> => {
+    const response = await axios.delete(`${API_BASE_URL}/admin/users/${id}`);
+    return response.data;
+};
+
+
+
+export interface Tag {
+    id: number;
+    name: string;
+}
+
+export interface Subcategory {
+    id: number;
+    category_id: number;
+    name: string;
+}
+
+export const adminCreateCategory = async (name: string): Promise<{ id: number; name: string }> => {
+    const response = await axios.post(`${API_BASE_URL}/admin/categories`, { name });
+    return response.data;
+};
+
+export const adminCreateSubcategory = async (categoryId: number, name: string): Promise<Subcategory> => {
+    const response = await axios.post(`${API_BASE_URL}/admin/categories/${categoryId}/subcategories`, { name });
+    return response.data;
+};
+
+export const adminGetTags = async (): Promise<{ tags: Tag[] }> => {
+    const response = await axios.get(`${API_BASE_URL}/admin/tags`);
+    return response.data;
+};
+
+export const adminCreateTag = async (name: string): Promise<Tag> => {
+    const response = await axios.post(`${API_BASE_URL}/admin/tags`, { name });
+    return response.data;
+};
+
+
+export interface Department {
+    id: number;
+    name: string;
+}
+
+export const getDepartments = async (): Promise<{ departments: Department[] }> => {
+    const response = await axios.get(`${API_BASE_URL}/admin/departments`);
     return response.data;
 };

@@ -12,7 +12,7 @@ type MonitoringHandler struct {
 	Repo *repository.Queries
 }
 
-// ==================== REQUEST/RESPONSE TYPES ====================
+
 
 type GetOverdueRequest struct {
 	DepartmentID int32 `query:"department_id"`
@@ -68,23 +68,23 @@ type GetKPIResponse struct {
 	Body KPIMetrics
 }
 
-// ==================== HANDLER METHODS ====================
+
 
 func (h *MonitoringHandler) GetOverdue(ctx context.Context, req *GetOverdueRequest) (*GetOverdueResponse, error) {
 	resp := new(GetOverdueResponse)
 
-	// Validate query parameters
+	
 	if err := validateOverdueParams(req); err != nil {
 		return nil, err
 	}
 
-	// Convert DepartmentID to pointer (0 means not provided)
+	
 	var departmentID *int32
 	if req.DepartmentID > 0 {
 		departmentID = &req.DepartmentID
 	}
 
-	// Fetch overdue tickets from repository
+	
 	tickets, err := h.Repo.GetOverdueTickets(ctx, repository.GetOverdueTicketsParams{
 		MinLostDays:  req.MinLostDays,
 		DepartmentID: departmentID,
@@ -94,7 +94,7 @@ func (h *MonitoringHandler) GetOverdue(ctx context.Context, req *GetOverdueReque
 		return nil, fmt.Errorf("failed to fetch overdue tickets: %w", err)
 	}
 
-	// Fetch total count of overdue tickets
+	
 	total, err := h.Repo.CountOverdueTickets(ctx, repository.CountOverdueTicketsParams{
 		MinLostDays:  req.MinLostDays,
 		DepartmentID: departmentID,
@@ -103,7 +103,7 @@ func (h *MonitoringHandler) GetOverdue(ctx context.Context, req *GetOverdueReque
 		return nil, fmt.Errorf("failed to count overdue tickets: %w", err)
 	}
 
-	// Format response
+	
 	resp.Body.Tickets = formatTickets(tickets)
 	resp.Body.Total = total
 
@@ -113,13 +113,13 @@ func (h *MonitoringHandler) GetOverdue(ctx context.Context, req *GetOverdueReque
 func (h *MonitoringHandler) GetDepartmentEfficiency(ctx context.Context, req *GetDepartmentEfficiencyRequest) (*GetDepartmentEfficiencyResponse, error) {
 	resp := new(GetDepartmentEfficiencyResponse)
 
-	// Fetch department efficiency data from repository
+	
 	departments, err := h.Repo.GetDepartmentEfficiency(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch department efficiency: %w", err)
 	}
 
-	// Format response
+	
 	resp.Body.Departments = formatDepartmentEfficiency(departments)
 
 	return resp, nil
@@ -128,12 +128,12 @@ func (h *MonitoringHandler) GetDepartmentEfficiency(ctx context.Context, req *Ge
 func (h *MonitoringHandler) GetKPI(ctx context.Context, req *GetKPIRequest) (*GetKPIResponse, error) {
 	resp := new(GetKPIResponse)
 
-	// Validate period parameter
+	
 	if err := validateKPIPeriod(req); err != nil {
 		return nil, err
 	}
 
-	// Fetch KPI data from repository
+	
 	kpi, err := h.Repo.GetKPI(ctx, repository.GetKPIParams{
 		Period: req.Period,
 	})
@@ -141,7 +141,7 @@ func (h *MonitoringHandler) GetKPI(ctx context.Context, req *GetKPIRequest) (*Ge
 		return nil, fmt.Errorf("failed to fetch KPI metrics: %w", err)
 	}
 
-	// Format response
+	
 	satisfactionIndex := 0.0
 	if kpi.SatisfactionIndex != nil {
 		if val, ok := kpi.SatisfactionIndex.(float64); ok {
@@ -158,15 +158,15 @@ func (h *MonitoringHandler) GetKPI(ctx context.Context, req *GetKPIRequest) (*Ge
 	return resp, nil
 }
 
-// ==================== VALIDATION ====================
+
 
 func validateOverdueParams(req *GetOverdueRequest) error {
-	// Validate min_lost_days is not negative
+	
 	if req.MinLostDays < 0 {
 		return fmt.Errorf("min_lost_days must be a positive integer")
 	}
 
-	// Validate limit is not negative and does not exceed maximum
+	
 	if req.Limit < 0 {
 		return fmt.Errorf("limit must be a positive integer")
 	}
@@ -174,7 +174,7 @@ func validateOverdueParams(req *GetOverdueRequest) error {
 		return fmt.Errorf("limit cannot exceed 100")
 	}
 
-	// Validate department_id if provided (0 means not provided)
+	
 	if req.DepartmentID < 0 {
 		return fmt.Errorf("department_id must be a positive integer")
 	}
@@ -196,7 +196,7 @@ func validateKPIPeriod(req *GetKPIRequest) error {
 	return nil
 }
 
-// ==================== FORMATTING ====================
+
 
 func formatTickets(tickets []repository.GetOverdueTicketsRow) []OverdueTicket {
 	result := make([]OverdueTicket, len(tickets))

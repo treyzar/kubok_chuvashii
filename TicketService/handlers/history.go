@@ -13,7 +13,7 @@ type HistoryHandler struct {
 	Pool *pgxpool.Pool
 }
 
-// ==================== GET TICKET HISTORY ====================
+
 
 type GetTicketHistoryRequest struct {
 	TicketID uuid.UUID `path:"id"`
@@ -53,7 +53,7 @@ func (h *HistoryHandler) GetTicketHistory(ctx context.Context, req *GetTicketHis
 	return resp, nil
 }
 
-// ==================== GET RECENT HISTORY ====================
+
 
 type GetRecentHistoryRequest struct {
 	Limit  int32 `query:"limit" default:"50" maximum:"200"`

@@ -75,7 +75,7 @@ export default function Monitoring() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
           <Card className="border-0 shadow-sm bg-white/90 backdrop-blur-md hover:shadow-lg transition-all duration-300 rounded-2xl relative overflow-hidden">
@@ -145,7 +145,7 @@ export default function Monitoring() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Departments Table */}
+        {}
         <motion.div className="lg:col-span-2" whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
           <Card className="border-0 shadow-sm bg-white/90 backdrop-blur-md rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300">
             <CardHeader className="bg-slate-50/30 border-b border-slate-100/50 pb-4 flex flex-row items-center justify-between">
@@ -196,7 +196,7 @@ export default function Monitoring() {
           </Card>
         </motion.div>
 
-        {/* Critical Appeals */}
+        {}
         <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
           <Card className="border-0 shadow-sm bg-white/90 backdrop-blur-md rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300">
             <CardHeader className="bg-gradient-to-r from-red-50/80 to-rose-50/80 border-b border-red-100/50 pb-4">

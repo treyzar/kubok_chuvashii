@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { Users, FileText, CheckCircle, Clock, TrendingUp, Loader2 } from "lucide-react"
 import { motion } from "motion/react"
 import { getStatisticsSummary, getCategoryStatistics, getDynamics, StatisticsSummary, CategoryStatistics, DynamicsDataPoint } from "@/api/tickets"
@@ -15,7 +15,7 @@ export default function Dashboard() {
     const loadData = async () => {
       setIsLoading(true)
       try {
-        // Get last 7 days for dynamics
+        
         const endDate = new Date()
         const startDate = new Date()
         startDate.setDate(startDate.getDate() - 6)
@@ -32,7 +32,25 @@ export default function Dashboard() {
         
         setSummary(summaryRes)
         setCategoryData(categoriesRes)
-        setDynamicsData(dynamicsRes.data)
+        
+        
+        const filledData: DynamicsDataPoint[] = []
+        const current = new Date(startDate)
+        
+        while (current <= endDate) {
+          const dateStr = current.toISOString().split('T')[0]
+          const existing = dynamicsRes.data.find(d => d.date === dateStr)
+          
+          filledData.push({
+            date: dateStr,
+            received: existing?.received || 0,
+            resolved: existing?.resolved || 0
+          })
+          
+          current.setDate(current.getDate() + 1)
+        }
+        
+        setDynamicsData(filledData)
       } catch (error) {
         console.error('Failed to load dashboard data:', error)
       } finally {
@@ -56,7 +74,7 @@ export default function Dashboard() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8 relative z-10"
     >
-      {/* Stats */}
+      {}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
           <Card className="border-0 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 bg-white relative overflow-hidden group">
@@ -145,7 +163,7 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Charts */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
           <Card className="border-0 shadow-sm hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300 bg-white/90 backdrop-blur-sm">
@@ -155,8 +173,8 @@ export default function Dashboard() {
             <CardContent>
               <div className="h-[300px] mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dynamicsData.map(d => {
-                    const date = new Date(d.date)
+                  <AreaChart data={dynamicsData.map((d: DynamicsDataPoint) => {
+                    const date = new Date(d.date + 'T00:00:00')
                     return {
                       name: date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
                       appeals: d.received,
@@ -197,7 +215,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="h-[300px] mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryData.map(c => ({
+                  <BarChart data={categoryData.map((c: CategoryStatistics) => ({
                     name: c.name,
                     value: c.ticket_count
                   }))} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={40}>

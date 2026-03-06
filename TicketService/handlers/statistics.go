@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/SomeSuperCoder/OnlineShop/repository"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type StatisticsHandler struct {
@@ -28,7 +29,7 @@ func (h *StatisticsHandler) GetSummary(ctx context.Context, req *struct{}) (*Get
 	return resp, nil
 }
 
-// ==========================================
+
 
 type GetCategoryStatisticsResponse struct {
 	Body []repository.GetCategoryStatisticsRow
@@ -46,12 +47,12 @@ func (h *StatisticsHandler) GetCategoryStatistics(ctx context.Context, req *stru
 	return resp, nil
 }
 
-// ==========================================
+
 
 type GetDynamicsRequest struct {
 	Period    string `query:"period" enum:"day,week" default:"day"`
-	StartDate string `query:"start_date"` // Format: YYYY-MM-DD
-	EndDate   string `query:"end_date"`   // Format: YYYY-MM-DD
+	StartDate string `query:"start_date"` 
+	EndDate   string `query:"end_date"`   
 }
 
 type DynamicsDataPoint struct {
@@ -71,12 +72,12 @@ func (h *StatisticsHandler) GetDynamics(ctx context.Context, req *GetDynamicsReq
 	resp := new(GetDynamicsResponse)
 	resp.Body.Period = req.Period
 
-	// Parse dates with defaults
+	
 	var startDate, endDate time.Time
 	var err error
 
 	if req.StartDate == "" {
-		// Default to 30 days ago
+		
 		startDate = time.Now().AddDate(0, 0, -30)
 	} else {
 		startDate, err = time.Parse("2006-01-02", req.StartDate)
@@ -86,7 +87,7 @@ func (h *StatisticsHandler) GetDynamics(ctx context.Context, req *GetDynamicsReq
 	}
 
 	if req.EndDate == "" {
-		// Default to now
+		
 		endDate = time.Now()
 	} else {
 		endDate, err = time.Parse("2006-01-02", req.EndDate)
@@ -96,10 +97,10 @@ func (h *StatisticsHandler) GetDynamics(ctx context.Context, req *GetDynamicsReq
 	}
 
 	if req.Period == "week" {
-		// Get weekly dynamics
+		
 		result, err := h.Repo.GetTicketDynamicsByWeek(ctx, repository.GetTicketDynamicsByWeekParams{
-			StartDate: startDate,
-			EndDate:   endDate,
+			StartDate: pgtype.Date{Time: startDate, Valid: true},
+			EndDate:   pgtype.Date{Time: endDate, Valid: true},
 		})
 		if err != nil {
 			return nil, err
@@ -118,10 +119,10 @@ func (h *StatisticsHandler) GetDynamics(ctx context.Context, req *GetDynamicsReq
 			}
 		}
 	} else {
-		// Get daily dynamics (default)
+		
 		result, err := h.Repo.GetTicketDynamics(ctx, repository.GetTicketDynamicsParams{
-			StartDate: startDate,
-			EndDate:   endDate,
+			StartDate: pgtype.Date{Time: startDate, Valid: true},
+			EndDate:   pgtype.Date{Time: endDate, Valid: true},
 		})
 		if err != nil {
 			return nil, err

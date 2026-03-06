@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/SomeSuperCoder/OnlineShop/internal"
 	"github.com/SomeSuperCoder/OnlineShop/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,7 +15,7 @@ type CommentsHandler struct {
 	Pool *pgxpool.Pool
 }
 
-// ==================== CREATE COMMENT ====================
+
 
 type PostCommentRequest struct {
 	TicketID uuid.UUID `path:"id"`
@@ -40,16 +41,30 @@ func (h *CommentsHandler) Post(ctx context.Context, req *PostCommentRequest) (*P
 
 	qtx := h.Repo.WithTx(tx)
 
-	// Create the comment
+	
+	var userName *string
+	var userEmail *string
+	authUser := internal.GetUserFromContext(ctx)
+	if authUser != nil {
+		email := authUser.Email
+		userName = &email 
+		userEmail = &email
+	} else {
+		userName = req.Body.UserName
+		userEmail = req.Body.UserEmail
+	}
+
+	
 	comment, err := qtx.CreateComment(ctx, repository.CreateCommentParams{
-		Ticket:  req.TicketID,
-		Message: req.Body.Message,
+		Ticket:   req.TicketID,
+		Message:  req.Body.Message,
+		UserName: userName,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Record history entry for the comment
+	
 	newValue, _ := json.Marshal(map[string]interface{}{
 		"comment_id": comment.ID,
 		"message":    comment.Message,
@@ -58,8 +73,8 @@ func (h *CommentsHandler) Post(ctx context.Context, req *PostCommentRequest) (*P
 		TicketID:  req.TicketID,
 		Action:    repository.HistoryActionCommentAdded,
 		NewValue:  newValue,
-		UserName:  req.Body.UserName,
-		UserEmail: req.Body.UserEmail,
+		UserName:  userName,
+		UserEmail: userEmail,
 	})
 	if err != nil {
 		return nil, err
@@ -72,7 +87,7 @@ func (h *CommentsHandler) Post(ctx context.Context, req *PostCommentRequest) (*P
 	return resp, nil
 }
 
-// ==================== GET COMMENTS ====================
+
 
 type GetCommentsRequest struct {
 	TicketID uuid.UUID `path:"id"`

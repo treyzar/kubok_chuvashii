@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
+	"github.com/SomeSuperCoder/OnlineShop/internal"
 	"github.com/SomeSuperCoder/OnlineShop/internal/embeddings"
 	"github.com/SomeSuperCoder/OnlineShop/repository"
 	"github.com/google/uuid"
@@ -17,14 +19,14 @@ type TicketHandler struct {
 	Pool *pgxpool.Pool
 }
 
-// ==================== CREATE ====================
+
 
 type PostTicketRequest struct {
 	Body struct {
 		Description   string  `json:"description"`
 		SenderName    string  `json:"sender_name"`
-		SenderPhone   string  `json:"sender_phone" default:"+1 500 555 0006"`
-		SenderEmail   *string `json:"sender_email" default:"test@example.com"`
+		SenderPhone   *string `json:"sender_phone,omitempty"`
+		SenderEmail   *string `json:"sender_email,omitempty"`
 		Longitude     float64 `json:"longitude"`
 		Latitude      float64 `json:"latitude"`
 		SubcategoryID int32   `json:"subcategory_id"`
@@ -50,14 +52,21 @@ func (h *TicketHandler) Post(ctx context.Context, req *PostTicketRequest) (*Post
 
 	qtx := h.Repo.WithTx(tx)
 
-	// Generate embedding from description
+	
 	vector, err := embeddings.GetEmbedding(req.Body.Description)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create GeoJSON or WKT point
+	
 	geoLocation := fmt.Sprintf("POINT(%f %f)", req.Body.Longitude, req.Body.Latitude)
+
+	
+	var address *string
+	if idx := strings.Index(req.Body.Description, "\n\nАдрес: "); idx != -1 {
+		addressStr := req.Body.Description[idx+10:]
+		address = &addressStr
+	}
 
 	result, err := qtx.CreateTicketWithDefaults(ctx, repository.CreateTicketWithDefaultsParams{
 		Description:   req.Body.Description,
@@ -72,9 +81,10 @@ func (h *TicketHandler) Post(ctx context.Context, req *PostTicketRequest) (*Post
 		Ticket:      result.ID,
 		Description: req.Body.Description,
 		SenderName:  req.Body.SenderName,
-		SenderPhone: &req.Body.SenderPhone,
+		SenderPhone: req.Body.SenderPhone,
 		SenderEmail: req.Body.SenderEmail,
 		GeoLocation: geoLocation,
+		Address:     address,
 	})
 	if err != nil {
 		return nil, err
@@ -83,7 +93,7 @@ func (h *TicketHandler) Post(ctx context.Context, req *PostTicketRequest) (*Post
 	resp.Body.Ticket = result
 	resp.Body.ComplaintDetails = details
 
-	// Record history entry
+	
 	newValue, _ := json.Marshal(map[string]interface{}{
 		"status":         result.Status,
 		"subcategory_id": result.SubcategoryID,
@@ -103,7 +113,7 @@ func (h *TicketHandler) Post(ctx context.Context, req *PostTicketRequest) (*Post
 	return resp, nil
 }
 
-// ==================== READ ====================
+
 
 type GetTicketRequest struct {
 	ID uuid.UUID `path:"id"`
@@ -127,8 +137,13 @@ func (h *TicketHandler) Get(ctx context.Context, req *GetTicketRequest) (*GetTic
 
 	qtx := h.Repo.WithTx(tx)
 
+	
+	deptFilter := internal.DepartmentFilter(ctx)
+
 	result, err := qtx.GetTicket(ctx, repository.GetTicketParams{
-		ID: req.ID,
+		ID:               req.ID,
+		IsAdmin:          internal.IsAdmin(ctx),
+		DepartmentFilter: deptFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -149,7 +164,7 @@ func (h *TicketHandler) Get(ctx context.Context, req *GetTicketRequest) (*GetTic
 	return resp, nil
 }
 
-// Left: `tags`
+
 type ListTicketsRequest struct {
 	Query         string                  `query:"query"`
 	Limit         int32                   `query:"limit" default:"10" maximum:"100"`
@@ -168,7 +183,7 @@ type ListTicketsResponse struct {
 func (h *TicketHandler) List(ctx context.Context, req *ListTicketsRequest) (*ListTicketsResponse, error) {
 	resp := new(ListTicketsResponse)
 
-	// Only generate embedding if query is not empty
+	
 	var vector *pgvector.Vector
 	if req.Query != "" {
 		v, err := embeddings.GetEmbedding(req.Query)
@@ -178,7 +193,7 @@ func (h *TicketHandler) List(ctx context.Context, req *ListTicketsRequest) (*Lis
 		vector = v
 	}
 
-	// Defaults
+	
 	var statusValid bool = false
 	switch req.Status {
 	case repository.TicketStatusInit, repository.TicketStatusOpen, repository.TicketStatusClosed:
@@ -189,6 +204,9 @@ func (h *TicketHandler) List(ctx context.Context, req *ListTicketsRequest) (*Lis
 		subcategoryID = &req.SubcategoryID
 	}
 
+	
+	deptFilter := internal.DepartmentFilter(ctx)
+
 	tickets, err := h.Repo.ListTickets(ctx, repository.ListTicketsParams{
 		Limit:  req.Limit,
 		Offset: req.Offset,
@@ -196,8 +214,10 @@ func (h *TicketHandler) List(ctx context.Context, req *ListTicketsRequest) (*Lis
 			TicketStatus: req.Status,
 			Valid:        statusValid,
 		},
-		Subcategory: subcategoryID,
-		Embedding:   vector,
+		Subcategory:      subcategoryID,
+		Embedding:        vector,
+		IsAdmin:          internal.IsAdmin(ctx),
+		DepartmentFilter: deptFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -213,7 +233,7 @@ func (h *TicketHandler) List(ctx context.Context, req *ListTicketsRequest) (*Lis
 	return resp, nil
 }
 
-// ==================== UPDATE ====================
+
 type UpdateTicketRequest struct {
 	TicketID uuid.UUID `path:"id"`
 	Body     struct {
@@ -238,20 +258,20 @@ func (h *TicketHandler) Update(ctx context.Context, req *UpdateTicketRequest) (*
 
 	qtx := h.Repo.WithTx(tx)
 
-	// Get current ticket state for history
+	
 	currentTicket, err := qtx.GetTicket(ctx, repository.GetTicketParams{ID: req.TicketID})
 	if err != nil {
 		return nil, err
 	}
 
-	// Do the nullable status
+	
 	var status repository.NullTicketStatus
 	if req.Body.Status != nil {
 		status.Valid = true
 		status.TicketStatus = *req.Body.Status
 	}
 
-	// Do the basic update
+	
 	updateResult, err := qtx.UpdateTicketSimple(ctx, repository.UpdateTicketSimpleParams{
 		ID:           req.TicketID,
 		Status:       status,
@@ -262,7 +282,7 @@ func (h *TicketHandler) Update(ctx context.Context, req *UpdateTicketRequest) (*
 	}
 	resp.Body = updateResult
 
-	// Record status change history
+	
 	if req.Body.Status != nil && *req.Body.Status != currentTicket.Status {
 		oldValue, _ := json.Marshal(map[string]interface{}{"status": currentTicket.Status})
 		newValue, _ := json.Marshal(map[string]interface{}{"status": *req.Body.Status})
@@ -277,7 +297,7 @@ func (h *TicketHandler) Update(ctx context.Context, req *UpdateTicketRequest) (*
 		}
 	}
 
-	// Record department change history
+	
 	if req.Body.DepartmentID != nil && (currentTicket.DepartmentID == nil || *req.Body.DepartmentID != *currentTicket.DepartmentID) {
 		oldValue, _ := json.Marshal(map[string]interface{}{"department_id": currentTicket.DepartmentID})
 		newValue, _ := json.Marshal(map[string]interface{}{"department_id": req.Body.DepartmentID})
@@ -292,7 +312,7 @@ func (h *TicketHandler) Update(ctx context.Context, req *UpdateTicketRequest) (*
 		}
 	}
 
-	// Add new tags
+	
 	if len(req.Body.AddTags) > 0 {
 		_, err = qtx.AddTagsToTicket(ctx, repository.AddTagsToTicketParams{
 			Ticket: req.TicketID,
@@ -302,7 +322,7 @@ func (h *TicketHandler) Update(ctx context.Context, req *UpdateTicketRequest) (*
 			return nil, err
 		}
 
-		// Record tags added history
+		
 		newValue, _ := json.Marshal(map[string]interface{}{"tags": req.Body.AddTags})
 		_, err = qtx.CreateHistoryEntry(ctx, repository.CreateHistoryEntryParams{
 			TicketID: req.TicketID,
@@ -314,7 +334,7 @@ func (h *TicketHandler) Update(ctx context.Context, req *UpdateTicketRequest) (*
 		}
 	}
 
-	// Remove some tags
+	
 	if len(req.Body.RemoveTags) > 0 {
 		_, err = qtx.DeleteTagsFromTicket(ctx, repository.DeleteTagsFromTicketParams{
 			Ticket: req.TicketID,
@@ -324,7 +344,7 @@ func (h *TicketHandler) Update(ctx context.Context, req *UpdateTicketRequest) (*
 			return nil, err
 		}
 
-		// Record tags removed history
+		
 		oldValue, _ := json.Marshal(map[string]interface{}{"tags": req.Body.RemoveTags})
 		_, err = qtx.CreateHistoryEntry(ctx, repository.CreateHistoryEntryParams{
 			TicketID: req.TicketID,
@@ -341,7 +361,7 @@ func (h *TicketHandler) Update(ctx context.Context, req *UpdateTicketRequest) (*
 	return resp, nil
 }
 
-// ==================== DELETE / HIDE ====================
+
 type DeleteTicketRequest struct {
 	ID uuid.UUID `path:"id"`
 }
@@ -368,7 +388,7 @@ func (h *TicketHandler) Delete(ctx context.Context, req *DeleteTicketRequest) (*
 		return nil, err
 	}
 
-	// Record deletion history
+	
 	oldValue, _ := json.Marshal(map[string]interface{}{
 		"status":         ticket.Status,
 		"is_deleted":     false,
@@ -392,7 +412,58 @@ func (h *TicketHandler) Delete(ctx context.Context, req *DeleteTicketRequest) (*
 	return resp, nil
 }
 
-// =================== MERGE ====================
+
+type HideTicketRequest struct {
+	ID uuid.UUID `path:"id"`
+}
+
+type HideTicketResponse struct {
+	Body repository.Ticket
+}
+
+func (h *TicketHandler) Hide(ctx context.Context, req *HideTicketRequest) (*HideTicketResponse, error) {
+	resp := new(HideTicketResponse)
+
+	tx, err := h.Pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := h.Repo.WithTx(tx)
+
+	ticket, err := qtx.HideTicket(ctx, repository.HideTicketParams{
+		ID: req.ID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	
+	oldValue, _ := json.Marshal(map[string]interface{}{
+		"status":         ticket.Status,
+		"is_hidden":      false,
+		"subcategory_id": ticket.SubcategoryID,
+	})
+	newValue, _ := json.Marshal(map[string]interface{}{"is_hidden": true})
+	_, err = qtx.CreateHistoryEntry(ctx, repository.CreateHistoryEntryParams{
+		TicketID: req.ID,
+		Action:   repository.HistoryActionDeleted, 
+		OldValue: oldValue,
+		NewValue: newValue,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resp.Body = ticket
+
+	tx.Commit(ctx)
+
+	return resp, nil
+}
+
+
 type MergeRequest struct {
 	Body struct {
 		Original   uuid.UUID   `json:"original"`
@@ -413,7 +484,7 @@ func (h *TicketHandler) Merge(ctx context.Context, req *MergeRequest) (*MergeRes
 
 	qtx := h.Repo.WithTx(tx)
 
-	// Update the 'ticket' field for all details for a duplicates
+	
 	_, err = qtx.UpdateDetailsParent(ctx, repository.UpdateDetailsParentParams{
 		Original:   req.Body.Original,
 		Duplicates: req.Body.Duplicates,
@@ -422,7 +493,7 @@ func (h *TicketHandler) Merge(ctx context.Context, req *MergeRequest) (*MergeRes
 		return nil, fmt.Errorf("Failed to update details ticket ownership: %w", err)
 	}
 
-	// Set the average embedding
+	
 	err = qtx.MergeEmbeddings(ctx, repository.MergeEmbeddingsParams{
 		Original:  req.Body.Original,
 		Duplcates: req.Body.Duplicates,
@@ -431,7 +502,7 @@ func (h *TicketHandler) Merge(ctx context.Context, req *MergeRequest) (*MergeRes
 		return nil, fmt.Errorf("Failed to merge embeddings: %w", err)
 	}
 
-	// Delete obsolete tickets
+	
 	err = qtx.DeleteAfterMerge(ctx, repository.DeleteAfterMergeParams{
 		Duplicates: req.Body.Duplicates,
 	})
@@ -439,7 +510,7 @@ func (h *TicketHandler) Merge(ctx context.Context, req *MergeRequest) (*MergeRes
 		return nil, err
 	}
 
-	// Record merge history
+	
 	newValue, _ := json.Marshal(map[string]interface{}{
 		"merged_tickets": req.Body.Duplicates,
 	})

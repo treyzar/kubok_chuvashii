@@ -24,7 +24,7 @@ import {
   Loader2
 } from "lucide-react"
 import { motion } from "motion/react"
-import { getTicket, getTicketComments, getTicketHistory, TicketDetailsResponse, Comment, HistoryEvent } from "@/api/tickets"
+import { getTicket, getTicketComments, getTicketHistory, updateTicket, hideTicket, deleteTicket, postTicketComment, getDepartments, TicketDetailsResponse, Comment, HistoryEvent, Department } from "@/api/tickets"
 
 export default function AppealDetail() {
   const { id } = useParams()
@@ -34,7 +34,25 @@ export default function AppealDetail() {
   const [ticketData, setTicketData] = useState<TicketDetailsResponse | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
   const [history, setHistory] = useState<HistoryEvent[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const refreshTicket = async () => {
+    if (!id) return;
+    try {
+      const [ticketRes, commentsRes, historyRes] = await Promise.all([
+        getTicket(id),
+        getTicketComments(id).catch(() => ({ comments: [] })),
+        getTicketHistory(id).catch(() => [])
+      ])
+      setTicketData(ticketRes)
+      setComments(commentsRes.comments || [])
+      setHistory(historyRes || [])
+    } catch (error) {
+      console.error("Failed to fetch ticket data:", error)
+    }
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -42,19 +60,13 @@ export default function AppealDetail() {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const [ticketRes, commentsRes, historyRes] = await Promise.all([
-          getTicket(id),
-          getTicketComments(id).catch(() => ({ comments: [] })),
-          getTicketHistory(id).catch(() => [])
-        ])
-        setTicketData(ticketRes)
-        setComments(commentsRes.comments || [])
-        setHistory(historyRes || [])
+        const depsRes = await getDepartments()
+        setDepartments(depsRes.departments || [])
       } catch (error) {
-        console.error("Failed to fetch ticket data:", error)
-      } finally {
-        setIsLoading(false)
+        console.error("Failed to fetch departments", error)
       }
+      await refreshTicket()
+      setIsLoading(false)
     }
 
     fetchData()
@@ -83,10 +95,6 @@ export default function AppealDetail() {
   const { ticket, details } = ticketData
   const detail = details[0] || {}
 
-  // Since the backend doesn't provide these, we use strict defaults or omit where possible
-  // incomingNumber will be generated from ticket ID
-  // outgoingNumber, source, files, duplicates are not available in current backend iteration
-
   const getStatusLabel = (s: string) => {
     switch (s) {
       case 'init': return 'Новое'
@@ -97,13 +105,66 @@ export default function AppealDetail() {
     }
   }
 
+  const handleHide = async () => {
+    if (!id) return;
+    try {
+      await hideTicket(id);
+      navigate('/crm/appeals');
+    } catch (error) {
+      console.error('Не удалось скрыть', error);
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!id) return;
+    try {
+      await deleteTicket(id);
+      navigate('/crm/appeals');
+    } catch (error) {
+      console.error('Не удалось удалить', error);
+    }
+  }
+
+  const handleUpdateStatus = async (status: string) => {
+    if (!id) return;
+    try {
+      await updateTicket(id, { status });
+      await refreshTicket();
+    } catch (error) {
+      console.error('Не удалось обновить статус', error);
+    }
+  }
+
+  const handleUpdateDepartment = async (department_id: string) => {
+    if (!id) return;
+    try {
+      await updateTicket(id, { department_id: department_id ? parseInt(department_id) : null });
+      await refreshTicket();
+    } catch (error) {
+      console.error('Не удалось изменить подразделение', error);
+    }
+  }
+
+  const handleAddComment = async () => {
+    if (!id || !comment.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await postTicketComment(id, { message: comment });
+      setComment("");
+      await refreshTicket();
+    } catch (error) {
+      console.error('Не удалось добавить комментарий', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6 max-w-6xl mx-auto relative z-10"
     >
-      {/* Header Actions */}
       <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/60">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/crm/appeals')} className="rounded-full hover:bg-slate-100 transition-colors">
@@ -115,23 +176,16 @@ export default function AppealDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 rounded-xl transition-all">
+          <Button variant="outline" onClick={handleHide} className="text-slate-600 border-slate-200 hover:bg-slate-50 rounded-xl transition-all">
             <EyeOff className="w-4 h-4 mr-2" /> Скрыть
           </Button>
-          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 rounded-xl transition-all">
+          <Button variant="outline" onClick={handleDelete} className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 rounded-xl transition-all">
             <Trash2 className="w-4 h-4 mr-2" /> Удалить
           </Button>
         </div>
       </div>
 
-      {/* Duplicate Warning */}
-      {/* 
-        This section is commented out because duplicates logic requires a specific API
-        endpoint to fetch similar tickets, which isn't implemented in the current component yet.
-      */}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
             <Card className="border-0 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden bg-white/90 backdrop-blur-sm">
@@ -171,7 +225,6 @@ export default function AppealDetail() {
             </Card>
           </motion.div>
 
-          {/* Comments Section */}
           <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
             <Card className="border-0 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader className="bg-slate-50/30 border-b border-slate-100/50 pb-4">
@@ -203,8 +256,13 @@ export default function AppealDetail() {
                     <Button variant="outline" size="sm" className="rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
                       <Paperclip className="w-4 h-4 mr-2" /> Прикрепить файл
                     </Button>
-                    <Button size="sm" className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 transition-all">
-                      <Send className="w-4 h-4 mr-2" /> Отправить
+                    <Button
+                      size="sm"
+                      onClick={handleAddComment}
+                      disabled={isSubmitting || !comment.trim()}
+                      className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 transition-all">
+                      {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                      Отправить
                     </Button>
                   </div>
                 </div>
@@ -212,7 +270,6 @@ export default function AppealDetail() {
             </Card>
           </motion.div>
 
-          {/* AI Assistant (Bonus) */}
           <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
             <Card className="border-0 shadow-lg shadow-indigo-500/10 rounded-2xl bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/90 relative overflow-hidden backdrop-blur-md border border-indigo-100/50">
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl -mr-20 -mt-20 animate-blob"></div>
@@ -237,9 +294,7 @@ export default function AppealDetail() {
           </motion.div>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Status Controls */}
           <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
             <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader className="bg-slate-50/30 border-b border-slate-100/50 pb-4">
@@ -248,7 +303,7 @@ export default function AppealDetail() {
               <CardContent className="p-6 space-y-5">
                 <div className="space-y-2.5">
                   <label className="text-sm font-semibold text-slate-700">Статус</label>
-                  <Select value={ticket.status} onChange={() => { }} className="h-11 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white transition-colors">
+                  <Select value={ticket.status} onChange={(e) => handleUpdateStatus(e.target.value)} className="h-11 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white transition-colors">
                     <option value="init">Новое</option>
                     <option value="open">В работе</option>
                     <option value="closed">Решено</option>
@@ -257,10 +312,11 @@ export default function AppealDetail() {
                 </div>
                 <div className="space-y-2.5">
                   <label className="text-sm font-semibold text-slate-700">Передать подразделению</label>
-                  <Select defaultValue="" className="h-11 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white transition-colors">
+                  <Select value={ticket.department_id?.toString() || ""} onChange={(e) => handleUpdateDepartment(e.target.value)} className="h-11 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white transition-colors">
                     <option value="" disabled>Выберите подразделение</option>
-                    <option value="gkh">Управление ЖКХ</option>
-                    <option value="roads">Управление дорог</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id.toString()}>{d.name}</option>
+                    ))}
                   </Select>
                 </div>
                 <div className="space-y-2.5">
@@ -282,7 +338,6 @@ export default function AppealDetail() {
             </Card>
           </motion.div>
 
-          {/* Sender Info */}
           <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
             <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader className="bg-slate-50/30 border-b border-slate-100/50 pb-4">
@@ -327,7 +382,6 @@ export default function AppealDetail() {
             </Card>
           </motion.div>
 
-          {/* History */}
           <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
             <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader className="bg-slate-50/30 border-b border-slate-100/50 pb-4">

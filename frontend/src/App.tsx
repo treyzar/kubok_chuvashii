@@ -7,14 +7,17 @@ import AppealDetail from "./pages/crm/AppealDetail"
 import Monitoring from "./pages/crm/Monitoring"
 import AdminPanel from "./pages/crm/AdminPanel"
 import Heatmap from "./pages/crm/Heatmap"
+import Login from "./pages/crm/Login"
+import ProtectedRoute from "./components/ProtectedRoute"
 
 export default function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<PublicForm />} />
+        <Route path="/crm/login" element={<Login />} />
         
-        <Route path="/crm" element={<CRMLayout />}>
+        <Route path="/crm" element={<ProtectedRoute><CRMLayout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/crm/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="appeals" element={<AppealsList />} />

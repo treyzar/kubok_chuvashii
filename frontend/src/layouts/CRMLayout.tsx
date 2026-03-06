@@ -1,10 +1,10 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
-import { 
-  LayoutDashboard, 
-  Inbox, 
-  Activity, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Inbox,
+  Activity,
+  Settings,
   LogOut,
   User,
   Map,
@@ -13,13 +13,14 @@ import {
 import { cn } from "@/lib/utils"
 import { motion } from "motion/react"
 import { fetchTickets } from "@/api/tickets"
+import { useAuthStore } from "@/store/auth"
 
 const navigation = [
   { name: 'Дашборд', href: '/crm/dashboard', icon: LayoutDashboard },
   { name: 'Обращения', href: '/crm/appeals', icon: Inbox },
   { name: 'Мониторинг', href: '/crm/monitoring', icon: Activity },
   { name: 'Тепловая карта', href: '/crm/heatmap', icon: Map },
-  { name: 'Админ-панель', href: '/crm/admin', icon: Settings },
+  { name: 'Админ-панель', href: '/crm/admin', icon: Settings, adminOnly: true },
 ]
 
 export default function CRMLayout() {
@@ -27,10 +28,19 @@ export default function CRMLayout() {
   const navigate = useNavigate()
   const [ticketCount, setTicketCount] = useState<number>(0)
 
-  // Find the active navigation item based on the current path
+  const user = useAuthStore((state) => state.user)
+  const getFullName = useAuthStore((state) => state.getFullName)
+  const logout = useAuthStore((state) => state.logout)
+
+  const handleLogout = () => {
+    logout()
+    navigate('/crm/login')
+  }
+
+  
   const activeNavItem = navigation.find(n => location.pathname.startsWith(n.href))
 
-  // Fetch ticket count on mount
+  
   useEffect(() => {
     const loadTicketCount = async () => {
       try {
@@ -40,13 +50,13 @@ export default function CRMLayout() {
         console.error('Failed to fetch ticket count:', error)
       }
     }
-    
+
     loadTicketCount()
   }, [])
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
-      {/* Sidebar */}
+      {}
       <div className="hidden md:flex md:w-72 md:flex-col border-r border-slate-200/60 bg-white/80 backdrop-blur-xl shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20 relative">
         <div className="flex flex-col flex-grow pt-6 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-6 mb-8">
@@ -55,41 +65,45 @@ export default function CRMLayout() {
             </div>
             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 tracking-tight">Городской Портал</span>
           </div>
-          
+
           <div className="px-4 mb-6">
             <div className="p-4 bg-gradient-to-br from-slate-50 to-blue-50/50 rounded-2xl border border-slate-100/80 flex items-center gap-3 shadow-sm">
               <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-600 shrink-0 border border-slate-100">
                 <User className="w-5 h-5" />
               </div>
               <div className="overflow-hidden">
-                <p className="text-sm font-semibold text-slate-900 truncate">Администратор</p>
-                <p className="text-xs text-slate-500 truncate">Администрация г. Чебоксары</p>
+                <p className="text-sm font-semibold text-slate-900 truncate">
+                  {getFullName() || 'Пользователь'}
+                </p>
+                <p className="text-xs text-slate-500 truncate">
+                  {user?.role === 'admin' ? 'Администратор' : user?.role === 'org' ? 'Организатор' : 'Исполнитель'}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="flex-grow flex flex-col px-4">
             <nav className="flex-1 space-y-2">
-              {navigation.map((item) => {
-                // Exact match for dashboard, startsWith for others to keep active state on subpages
-                const isActive = item.href === '/crm/dashboard' 
-                  ? location.pathname === item.href 
+              {navigation.filter(item => !item.adminOnly || user?.role === 'admin').map((item) => {
+                
+                const isActive = item.href === '/crm/dashboard'
+                  ? location.pathname === item.href
                   : location.pathname.startsWith(item.href)
-                  
+
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={cn(
-                      isActive 
-                        ? 'bg-blue-50/80 text-blue-700 shadow-sm border border-blue-100/50' 
+                      isActive
+                        ? 'bg-blue-50/80 text-blue-700 shadow-sm border border-blue-100/50'
                         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent',
                       'group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-300 relative overflow-hidden'
                     )}
                   >
                     {isActive && (
-                      <motion.div 
-                        layoutId="active-nav" 
+                      <motion.div
+                        layoutId="active-nav"
                         className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-600"
                         initial={false}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -113,10 +127,10 @@ export default function CRMLayout() {
               })}
             </nav>
           </div>
-          
+
           <div className="flex-shrink-0 px-4 mt-8">
-            <button 
-              onClick={() => navigate('/')}
+            <button
+              onClick={handleLogout}
               className="w-full flex items-center px-3 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-all duration-300 border border-transparent hover:border-red-100"
             >
               <LogOut className="mr-3 h-5 w-5 text-red-500" /> Выйти
@@ -125,17 +139,17 @@ export default function CRMLayout() {
         </div>
       </div>
 
-      {/* Main content */}
+      {}
       <div className="flex flex-col w-0 flex-1 overflow-hidden relative mesh-bg">
-        
-        {/* Animated Background Blobs */}
+
+        {}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
           <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
           <div className="absolute top-[20%] right-[-10%] w-96 h-96 bg-indigo-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
           <div className="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-emerald-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
         </div>
 
-        {/* Top Header */}
+        {}
         <header className="glass-colorful border-b border-white/40 h-16 flex items-center justify-between px-8 shrink-0 z-10 relative">
           <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">
             {activeNavItem?.name || 'CRM'}

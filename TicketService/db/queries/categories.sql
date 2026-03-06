@@ -16,6 +16,9 @@ INSERT INTO departments (name) VALUES ($1) RETURNING *;
 -- name: GetDepartments :many
 SELECT * FROM departments;
 
+-- name: GetTags :many
+SELECT * FROM tags ORDER BY name ASC;
+
 -- name: CreateTag :one
 INSERT INTO tags (name) VALUES ($1) RETURNING *;
 

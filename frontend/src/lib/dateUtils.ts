@@ -1,14 +1,9 @@
-/**
- * Date formatting utilities using Russian locale
- * Uses date-fns library for consistent date handling
- */
+
 
 import { format, parseISO, isValid, parse } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-/**
- * Russian month names (nominative case)
- */
+
 export const RUSSIAN_MONTHS = [
   'январь',
   'февраль',
@@ -24,9 +19,7 @@ export const RUSSIAN_MONTHS = [
   'декабрь',
 ];
 
-/**
- * Russian month names (genitive case - used with dates)
- */
+
 export const RUSSIAN_MONTHS_GENITIVE = [
   'января',
   'февраля',
@@ -42,14 +35,10 @@ export const RUSSIAN_MONTHS_GENITIVE = [
   'декабря',
 ];
 
-/**
- * Russian day names (short form)
- */
+
 export const RUSSIAN_DAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-/**
- * Russian day names (full form)
- */
+
 export const RUSSIAN_DAYS_FULL = [
   'Понедельник',
   'Вторник',
@@ -60,12 +49,7 @@ export const RUSSIAN_DAYS_FULL = [
   'Воскресенье',
 ];
 
-/**
- * Format date in short format (DD.MM.YYYY)
- * @param date - Date string, Date object, or timestamp
- * @returns Formatted date string in DD.MM.YYYY format
- * @example formatDateShort('2024-03-15') => '15.03.2024'
- */
+
 export function formatDateShort(date: string | Date | number): string {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
@@ -79,12 +63,7 @@ export function formatDateShort(date: string | Date | number): string {
   }
 }
 
-/**
- * Format date with time (DD.MM.YYYY HH:MM)
- * @param date - Date string, Date object, or timestamp
- * @returns Formatted date string in DD.MM.YYYY HH:MM format
- * @example formatDateTime('2024-03-15T14:30:00') => '15.03.2024 14:30'
- */
+
 export function formatDateTime(date: string | Date | number): string {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
@@ -98,12 +77,7 @@ export function formatDateTime(date: string | Date | number): string {
   }
 }
 
-/**
- * Format date with full time including seconds (DD.MM.YYYY HH:MM:SS)
- * @param date - Date string, Date object, or timestamp
- * @returns Formatted date string in DD.MM.YYYY HH:MM:SS format
- * @example formatDateTimeFull('2024-03-15T14:30:45') => '15.03.2024 14:30:45'
- */
+
 export function formatDateTimeFull(date: string | Date | number): string {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
@@ -117,12 +91,7 @@ export function formatDateTimeFull(date: string | Date | number): string {
   }
 }
 
-/**
- * Format date in long format with Russian month name (D MMMM YYYY)
- * @param date - Date string, Date object, or timestamp
- * @returns Formatted date string with Russian month name
- * @example formatDateLong('2024-03-15') => '15 марта 2024'
- */
+
 export function formatDateLong(date: string | Date | number): string {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
@@ -136,12 +105,7 @@ export function formatDateLong(date: string | Date | number): string {
   }
 }
 
-/**
- * Format date with day of week (DD.MM.YYYY, День недели)
- * @param date - Date string, Date object, or timestamp
- * @returns Formatted date string with day of week
- * @example formatDateWithDay('2024-03-15') => '15.03.2024, Пятница'
- */
+
 export function formatDateWithDay(date: string | Date | number): string {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
@@ -155,12 +119,7 @@ export function formatDateWithDay(date: string | Date | number): string {
   }
 }
 
-/**
- * Format time only (HH:MM)
- * @param date - Date string, Date object, or timestamp
- * @returns Formatted time string in HH:MM format
- * @example formatTime('2024-03-15T14:30:00') => '14:30'
- */
+
 export function formatTime(date: string | Date | number): string {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
@@ -174,12 +133,7 @@ export function formatTime(date: string | Date | number): string {
   }
 }
 
-/**
- * Get Russian month name (nominative case)
- * @param monthIndex - Month index (0-11)
- * @returns Russian month name
- * @example getMonthName(0) => 'январь'
- */
+
 export function getMonthName(monthIndex: number): string {
   if (monthIndex < 0 || monthIndex > 11) {
     return '';
@@ -187,12 +141,7 @@ export function getMonthName(monthIndex: number): string {
   return RUSSIAN_MONTHS[monthIndex];
 }
 
-/**
- * Get Russian month name in genitive case (used with dates)
- * @param monthIndex - Month index (0-11)
- * @returns Russian month name in genitive case
- * @example getMonthNameGenitive(0) => 'января'
- */
+
 export function getMonthNameGenitive(monthIndex: number): string {
   if (monthIndex < 0 || monthIndex > 11) {
     return '';
@@ -200,12 +149,7 @@ export function getMonthNameGenitive(monthIndex: number): string {
   return RUSSIAN_MONTHS_GENITIVE[monthIndex];
 }
 
-/**
- * Parse date from DD.MM.YYYY format
- * @param dateString - Date string in DD.MM.YYYY format
- * @returns Date object or null if invalid
- * @example parseDateShort('15.03.2024') => Date object
- */
+
 export function parseDateShort(dateString: string): Date | null {
   try {
     const parsed = parse(dateString, 'dd.MM.yyyy', new Date(), { locale: ru });
@@ -216,12 +160,7 @@ export function parseDateShort(dateString: string): Date | null {
   }
 }
 
-/**
- * Parse date time from DD.MM.YYYY HH:MM format
- * @param dateTimeString - Date time string in DD.MM.YYYY HH:MM format
- * @returns Date object or null if invalid
- * @example parseDateTime('15.03.2024 14:30') => Date object
- */
+
 export function parseDateTime(dateTimeString: string): Date | null {
   try {
     const parsed = parse(dateTimeString, 'dd.MM.yyyy HH:mm', new Date(), { locale: ru });
@@ -232,12 +171,7 @@ export function parseDateTime(dateTimeString: string): Date | null {
   }
 }
 
-/**
- * Format date for input[type="date"] (YYYY-MM-DD)
- * @param date - Date string, Date object, or timestamp
- * @returns Formatted date string in YYYY-MM-DD format
- * @example formatDateForInput('2024-03-15T14:30:00') => '2024-03-15'
- */
+
 export function formatDateForInput(date: string | Date | number): string {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
@@ -251,12 +185,7 @@ export function formatDateForInput(date: string | Date | number): string {
   }
 }
 
-/**
- * Validate date range (end date must be >= start date)
- * @param startDate - Start date
- * @param endDate - End date
- * @returns true if valid, false otherwise
- */
+
 export function isValidDateRange(
   startDate: string | Date | number,
   endDate: string | Date | number
@@ -276,11 +205,7 @@ export function isValidDateRange(
   }
 }
 
-/**
- * Format relative time in Russian (e.g., "2 дня назад")
- * @param date - Date string, Date object, or timestamp
- * @returns Relative time string in Russian
- */
+
 export function formatRelativeTime(date: string | Date | number): string {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
@@ -312,9 +237,7 @@ export function formatRelativeTime(date: string | Date | number): string {
   }
 }
 
-/**
- * Pluralize minutes in Russian
- */
+
 function pluralizeMinutes(count: number): string {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -331,9 +254,7 @@ function pluralizeMinutes(count: number): string {
   return 'минут';
 }
 
-/**
- * Pluralize hours in Russian
- */
+
 function pluralizeHours(count: number): string {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
@@ -350,9 +271,7 @@ function pluralizeHours(count: number): string {
   return 'часов';
 }
 
-/**
- * Pluralize days in Russian
- */
+
 function pluralizeDays(count: number): string {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;

@@ -9,7 +9,7 @@ import (
 )
 
 func DatabaseConnect(ctx context.Context, config *AppConfig) (*pgxpool.Pool, *repository.Queries, *redis.Client) {
-	// ===== Postgres =====
+	
 	pool, err := pgxpool.New(ctx, config.PostgresURL)
 	if err != nil {
 		panic(err)
@@ -20,7 +20,7 @@ func DatabaseConnect(ctx context.Context, config *AppConfig) (*pgxpool.Pool, *re
 	}
 	repo := repository.New(pool)
 
-	// ====== Redis =====
+	
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     config.RedisURL,
 		Password: "",

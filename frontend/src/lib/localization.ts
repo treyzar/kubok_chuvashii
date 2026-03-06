@@ -1,7 +1,4 @@
-/**
- * Localization strings and utilities for the CRM application
- * All UI text in Russian
- */
+
 
 export interface LocalizationStrings {
   common: {
@@ -116,9 +113,7 @@ export interface LocalizationStrings {
   };
 }
 
-/**
- * Russian localization strings
- */
+
 export const RU_LOCALIZATION: LocalizationStrings = {
   common: {
     all: 'Все',
@@ -232,11 +227,7 @@ export const RU_LOCALIZATION: LocalizationStrings = {
   },
 };
 
-/**
- * Get localized status label
- * @param status - Status code (init, open, closed, rejected)
- * @returns Russian status label
- */
+
 export function getStatusLabel(status: string): string {
   const statusMap: Record<string, string> = {
     init: RU_LOCALIZATION.status.init,
@@ -248,10 +239,7 @@ export function getStatusLabel(status: string): string {
   return statusMap[status] || status;
 }
 
-/**
- * Get all status options for dropdowns
- * @returns Array of status options with value and label
- */
+
 export function getStatusOptions(): Array<{ value: string; label: string }> {
   return [
     { value: 'init', label: RU_LOCALIZATION.status.init },
@@ -261,17 +249,13 @@ export function getStatusOptions(): Array<{ value: string; label: string }> {
   ];
 }
 
-/**
- * Get localized error message based on error type
- * @param error - Error object or error code
- * @returns Russian error message
- */
+
 export function getErrorMessage(error: any): string {
   if (!error) {
     return RU_LOCALIZATION.common.error;
   }
 
-  // Handle axios errors
+  
   if (error.response) {
     const status = error.response.status;
     switch (status) {
@@ -292,16 +276,14 @@ export function getErrorMessage(error: any): string {
     }
   }
 
-  // Handle network errors
+  
   if (error.request) {
     return RU_LOCALIZATION.errors.networkError;
   }
 
-  // Handle other errors
+  
   return error.message || RU_LOCALIZATION.common.error;
 }
 
-/**
- * Default export for convenience
- */
+
 export default RU_LOCALIZATION;

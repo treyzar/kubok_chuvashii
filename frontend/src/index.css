@@ -21,7 +21,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.03em;
 }
 
-/* Custom scrollbar */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -37,7 +37,7 @@ h1, h2, h3, h4, h5, h6 {
   background: #94a3b8;
 }
 
-/* Glassmorphism */
+
 .glass {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px);
@@ -62,7 +62,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
-/* Mesh Backgrounds */
+
 .mesh-bg {
   background-color: #f8fafc;
   background-image: 
@@ -76,12 +76,12 @@ h1, h2, h3, h4, h5, h6 {
   background-attachment: fixed;
 }
 
-/* Hide Leaflet logo/attribution */
+
 .leaflet-control-attribution {
   display: none !important;
 }
 
-/* Animations */
+
 @keyframes float {
   0% { transform: translateY(0px) rotate(0deg); }
   50% { transform: translateY(-15px) rotate(2deg); }

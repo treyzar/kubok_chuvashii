@@ -20,9 +20,10 @@ INSERT INTO complaint_details (
   sender_name,
   sender_phone,
   sender_email,
-  geo_location
+  geo_location,
+  address
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
+  $1, $2, $3, $4, $5, $6, $7
 ) RETURNING *;
 
 -- name: GetTicket :one
@@ -51,7 +52,8 @@ LEFT JOIN categories c ON c.id = sc.category_id
 LEFT JOIN departments d ON d.id = t.department_id
 LEFT JOIN ticket_tags ON ticket_tags.ticket = t.id
 LEFT JOIN tags ON tags.id = ticket_tags.tag
-WHERE t.id = $1 AND t.is_hidden = false AND t.is_deleted = false
+WHERE t.id = $1 AND t.is_hidden = false AND t.is_deleted = false AND
+  (sqlc.arg('is_admin')::BOOLEAN OR (sqlc.narg('department_filter')::INTEGER IS NOT NULL AND t.department_id = sqlc.narg('department_filter')::INTEGER))
 GROUP BY t.id, c.name, sc.name, d.name;
 
 -- name: GetDetailsForTicket :many
@@ -61,6 +63,7 @@ SELECT
   cd.sender_name,
   cd.sender_phone,
   cd.sender_email,
+  cd.address,
   ST_X(cd.geo_location::geometry) AS longitude,
   ST_Y(cd.geo_location::geometry) AS latitude
 FROM complaint_details cd
@@ -102,7 +105,8 @@ LEFT JOIN tags ON tags.id = ticket_tags.tag
 WHERE
   t.is_hidden = false AND t.is_deleted = false AND
   (sqlc.narg('status')::ticket_status IS NULL OR t.status = sqlc.narg('status')::ticket_status) AND
-  (sqlc.narg('subcategory')::INTEGER IS NULL OR t.subcategory_id = sqlc.narg('subcategory')::INTEGER)
+  (sqlc.narg('subcategory')::INTEGER IS NULL OR t.subcategory_id = sqlc.narg('subcategory')::INTEGER) AND
+  (sqlc.arg('is_admin')::BOOLEAN OR (sqlc.narg('department_filter')::INTEGER IS NOT NULL AND t.department_id = sqlc.narg('department_filter')::INTEGER))
 GROUP BY t.id, c.name, sc.name, d.name
 ORDER BY 
   CASE 
@@ -139,6 +143,12 @@ ON CONFLICT DO NOTHING;
 -- name: DeleteTicket :one
 UPDATE tickets
 SET is_deleted = true
+WHERE id = $1
+RETURNING *;
+
+-- name: HideTicket :one
+UPDATE tickets
+SET is_hidden = true
 WHERE id = $1
 RETURNING *;
 

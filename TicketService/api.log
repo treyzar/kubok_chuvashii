@@ -1,0 +1,47 @@
+nohup: ввод игнорируется
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /api/v1/openapi.json      --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/openapi-3.0.json  --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/openapi.yaml      --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/openapi-3.0.yaml  --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/docs              --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/schemas/:schema   --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/auth/login        --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/public/categories --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/admin/categories  --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/admin/categories/:id/subcategories --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/admin/tags        --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/admin/tags        --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/admin/departments --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/public/tickets    --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/tickets/:id       --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/tickets           --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] PATCH  /api/v1/tickets/:id       --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] DELETE /api/v1/tickets/:id       --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/tickets/:id/hide  --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/tickets/merge     --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/statistics/summary --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/statistics/categories --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/statistics/dynamics --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/tickets/:id/history --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/history/recent    --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/tickets/:id/comments --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/tickets/:id/comments --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/heatmap/points    --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/heatmap/stats     --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/monitoring/overdue --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/monitoring/departments --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/monitoring/kpi    --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/admin/users       --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/admin/users       --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] PATCH  /api/v1/admin/users/:id   --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] DELETE /api/v1/admin/users/:id   --> github.com/danielgtaylor/huma/v2/adapters/humagin.(*ginAdapter).Handle.func1 (5 handlers)
+[GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
+Please check https://github.com/gin-gonic/gin/blob/master/docs/doc.md#dont-trust-all-proxies for details.
+[GIN-debug] Listening and serving HTTP on :8888
+[GIN-debug] [ERROR] listen tcp :8888: bind: address already in use

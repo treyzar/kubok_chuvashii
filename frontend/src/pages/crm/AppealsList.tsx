@@ -22,7 +22,7 @@ const getStatusBadge = (status: string) => {
   }
 }
 
-// Convert status logic for styling
+
 const getStatusTheme = (status: string) => {
   switch (status) {
     case 'init': return { gradient: 'from-blue-400 to-blue-600', glow: 'bg-blue-500' }
@@ -32,7 +32,7 @@ const getStatusTheme = (status: string) => {
   }
 }
 
-// Get tag styling based on tag name
+
 const getTagStyle = (tag: string) => {
   const tagLower = tag.toLowerCase()
   
@@ -68,7 +68,7 @@ const getTagStyle = (tag: string) => {
     }
   }
   
-  // Default style for other tags
+  
   return {
     className: 'hover:bg-purple-50 border-purple-200 text-purple-700 rounded-lg py-1',
     activeClassName: 'bg-purple-100 border-purple-300',
@@ -80,7 +80,7 @@ export default function AppealsList() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   
-  // Filter states
+  
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "")
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || "")
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || "")
@@ -90,27 +90,27 @@ export default function AppealsList() {
     return tagsParam ? tagsParam.split(',') : []
   })
   
-  // UI states
+  
   const [showCategoryBrowser, setShowCategoryBrowser] = useState(true)
   
-  // Data states
+  
   const [tickets, setTickets] = useState<Ticket[]>([])
-  const [allTickets, setAllTickets] = useState<Ticket[]>([]) // Store all tickets for client-side filtering
+  const [allTickets, setAllTickets] = useState<Ticket[]>([]) 
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [total, setTotal] = useState(0)
   
-  // Available tags from loaded tickets
+  
   const availableTags = Array.from(
     new Set(
       allTickets.flatMap(ticket => ticket.tag_names || [])
     )
   ).sort()
   
-  // Debounce search term
+  
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
-  // Load categories on mount
+  
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -123,36 +123,36 @@ export default function AppealsList() {
     loadCategories()
   }, [])
 
-  // Get subcategories for selected category
+  
   const availableSubcategories = categoryFilter
     ? categories.find(c => c.category_info.id.toString() === categoryFilter)?.subcategories || []
     : []
 
-  // Reset subcategory when category changes
+  
   useEffect(() => {
     if (categoryFilter && !availableSubcategories.find(s => s.id.toString() === subcategoryFilter)) {
       setSubcategoryFilter("")
     }
   }, [categoryFilter, availableSubcategories, subcategoryFilter])
 
-  // Load tickets when filters change
+  
   useEffect(() => {
     const loadTickets = async () => {
       setIsLoading(true)
       try {
         const params: any = { limit: 50 }
         
-        // Add search query
+        
         if (debouncedSearchTerm) {
           params.query = debouncedSearchTerm
         }
         
-        // Add status filter
+        
         if (statusFilter && statusFilter !== "none") {
           params.status_id = statusFilter
         }
         
-        // Add subcategory filter (more specific than category)
+        
         if (subcategoryFilter) {
           params.subcategory_id = parseInt(subcategoryFilter)
         }
@@ -161,7 +161,7 @@ export default function AppealsList() {
         const fetchedTickets = res.tickets || []
         setAllTickets(fetchedTickets)
         
-        // Apply client-side tag filtering
+        
         let filteredTickets = fetchedTickets
         if (selectedTags.length > 0) {
           filteredTickets = fetchedTickets.filter(ticket => {
@@ -173,7 +173,7 @@ export default function AppealsList() {
         setTickets(filteredTickets)
         setTotal(filteredTickets.length)
         
-        // Update URL params
+        
         const newParams = new URLSearchParams()
         if (searchTerm) newParams.set('search', searchTerm)
         if (statusFilter) newParams.set('status', statusFilter)
@@ -191,10 +191,10 @@ export default function AppealsList() {
     loadTickets()
   }, [debouncedSearchTerm, statusFilter, subcategoryFilter, selectedTags])
 
-  // Check if any filters are active
+  
   const hasActiveFilters = searchTerm || statusFilter || categoryFilter || subcategoryFilter || selectedTags.length > 0
 
-  // Toggle tag selection
+  
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => 
       prev.includes(tag) 
@@ -203,7 +203,7 @@ export default function AppealsList() {
     )
   }
 
-  // Clear all filters
+  
   const clearFilters = () => {
     setSearchTerm("")
     setStatusFilter("")
@@ -240,7 +240,7 @@ export default function AppealsList() {
         )}
       </div>
 
-      {/* Filters */}
+      {}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -311,7 +311,7 @@ export default function AppealsList() {
               </div>
             </div>
 
-            {/* Category and Subcategory Browser */}
+            {}
             {categories.length > 0 && (
               <div className="mt-6 border-t pt-6">
                 <button
@@ -469,7 +469,7 @@ export default function AppealsList() {
         </Card>
       </motion.div>
 
-      {/* List */}
+      {}
       <div className="space-y-4">
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
@@ -493,10 +493,10 @@ export default function AppealsList() {
                 className="border-0 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer bg-white/90 backdrop-blur-sm group relative overflow-hidden rounded-2xl"
                 onClick={() => navigate(`/crm/appeals/${ticket.id}`)}
               >
-                {/* Status Indicator Line */}
+                {}
                 <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300 group-hover:w-2 bg-gradient-to-b ${theme.gradient}`} />
 
-                {/* Subtle background glow on hover */}
+                {}
                 <div className={`absolute right-0 top-0 w-64 h-64 rounded-full blur-3xl opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none -mr-20 -mt-20 ${theme.glow}`}></div>
 
                 <CardContent className="p-5 sm:p-6 pl-6 sm:pl-8 relative z-10">

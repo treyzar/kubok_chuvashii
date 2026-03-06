@@ -27,7 +27,7 @@ const timePeriods: { key: TimePeriod; label: string }[] = [
   { key: 'year', label: 'Год' },
 ]
 
-/* Animated counter component */
+
 function AnimatedNumber({ value, decimals = 0 }: { value: number; decimals?: number }) {
   const motionVal = useMotionValue(0)
   const rounded = useTransform(motionVal, (v) =>
@@ -62,13 +62,13 @@ export default function Heatmap() {
     setIsMounted(true)
   }, [])
 
-  // Load categories
+  
   useEffect(() => {
     const loadCategories = async () => {
       try {
         const data = await fetchCategories()
         setCategories(data)
-        // Select all categories by default
+        
         setActiveCategories(new Set(data.map(c => c.category_info.id)))
       } catch (error) {
         console.error("Failed to load categories", error)
@@ -77,7 +77,7 @@ export default function Heatmap() {
     loadCategories()
   }, [])
 
-  // Load heatmap points
+  
   useEffect(() => {
     const loadHeatmapData = async () => {
       if (activeCategories.size === 0) return
@@ -90,12 +90,12 @@ export default function Heatmap() {
         }
         const response = await getHeatmapPoints(params)
         
-        // Transform API response to HeatPoint format
+        
         const points: HeatPoint[] = response.points.map((p, index) => ({
           id: index,
           lat: p.lat,
           lng: p.lng,
-          category_id: 0, // API doesn't return category info per point
+          category_id: 0, 
           category_name: '',
           intensity: p.intensity,
           count: p.count
@@ -124,7 +124,7 @@ export default function Heatmap() {
     })
   }
 
-  // Helper to get category color
+  
   const getCategoryColor = (catId: number) => {
     const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899']
     return colors[catId % colors.length]
@@ -151,7 +151,7 @@ export default function Heatmap() {
     const avg = heatPoints.length > 0 ? total / heatPoints.length : 0
     const maxPoint = heatPoints.reduce((max, p) => p.count > max.count ? p : max, heatPoints[0] || { count: 0 })
     
-    // Group by category
+    
     const byCat = categories.map(c => {
       const catPoints = heatPoints.filter(p => p.category_id === c.category_info.id)
       return {
@@ -176,7 +176,7 @@ export default function Heatmap() {
       className="flex flex-col relative z-10"
       style={{ minHeight: 'calc(100vh - 140px)' }}
     >
-      {/* Header */}
+      {}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -202,7 +202,7 @@ export default function Heatmap() {
         </h1>
       </motion.div>
 
-      {/* Stats Cards Row */}
+      {}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
           { icon: <BarChart3 className="w-5 h-5 text-blue-600" />, label: "Всего обращений", value: stats.total, accent: "blue", decimals: 0 },
@@ -214,18 +214,18 @@ export default function Heatmap() {
         ))}
       </div>
 
-      {/* Main content area */}
+      {}
       <div className="flex flex-col xl:flex-row gap-5 flex-1">
-        {/* Map area */}
+        {}
         <div className="flex-1 flex flex-col gap-4 min-w-0">
-          {/* Filters bar */}
+          {}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row gap-3"
           >
-            {/* Category filters */}
+            {}
             <div className="flex flex-wrap gap-2 flex-1">
               {isLoading ? (
                 <div className="flex items-center gap-2 text-slate-400">
@@ -255,7 +255,7 @@ export default function Heatmap() {
                         }
                       `}
                     >
-                      {/* Active glow background */}
+                      {}
                       <AnimatePresence>
                         {isActive && (
                           <motion.div
@@ -284,7 +284,7 @@ export default function Heatmap() {
               )}
             </div>
 
-            {/* Time period */}
+            {}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -312,7 +312,7 @@ export default function Heatmap() {
             </motion.div>
           </motion.div>
 
-          {/* Map Card */}
+          {}
           <motion.div
             initial={{ opacity: 0, y: 25, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -320,7 +320,7 @@ export default function Heatmap() {
             className="flex-1"
           >
             <Card className="h-full flex flex-col overflow-hidden border-0 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-500 rounded-2xl bg-white/90 backdrop-blur-md min-h-[500px] relative group">
-              {/* Subtle top gradient bar */}
+              {}
               <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 opacity-80" />
               <CardContent className="p-0 flex-1 relative z-0">
                 <AnimatePresence mode="wait">
@@ -350,7 +350,7 @@ export default function Heatmap() {
                   )}
                 </AnimatePresence>
 
-                {/* Points counter overlay */}
+                {}
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -368,7 +368,7 @@ export default function Heatmap() {
                   </div>
                 </motion.div>
 
-                {/* Legend overlay */}
+                {}
                 <motion.div
                   initial={{ opacity: 0, y: 20, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -398,14 +398,14 @@ export default function Heatmap() {
           </motion.div>
         </div>
 
-        {/* Side stats panel */}
+        {}
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="xl:w-72 flex flex-col gap-4"
         >
-          {/* Category breakdown */}
+          {}
           <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
             <Card className="border-0 shadow-sm hover:shadow-lg hover:shadow-orange-500/5 transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-md overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100/50">
@@ -465,7 +465,7 @@ export default function Heatmap() {
             </Card>
           </motion.div>
 
-          {/* Top addresses */}
+          {}
           <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
             <Card className="border-0 shadow-sm hover:shadow-lg hover:shadow-red-500/5 transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-md overflow-hidden flex-1">
               <div className="px-5 py-4 border-b border-slate-100/50">
@@ -543,7 +543,7 @@ export default function Heatmap() {
   )
 }
 
-/* Stat Card mini component */
+
 function StatCard({ icon, label, value, subtitle, accent, index, decimals = 0 }: {
   icon: React.ReactNode
   label: string
@@ -589,7 +589,7 @@ function StatCard({ icon, label, value, subtitle, accent, index, decimals = 0 }:
       whileHover={{ y: -5 }}
     >
       <Card className={`border-0 shadow-sm hover:shadow-xl ${shadowMap[accent]} transition-all duration-300 bg-white/90 backdrop-blur-sm overflow-hidden relative group`}>
-        {/* Hover glow */}
+        {}
         <div className={`absolute top-0 right-0 w-32 h-32 ${glowMap[accent]} opacity-0 group-hover:opacity-10 rounded-full blur-2xl -mr-10 -mt-10 transition-opacity duration-500 pointer-events-none`} />
         <CardContent className="p-4 relative z-10">
           <div className="flex items-start gap-3">
