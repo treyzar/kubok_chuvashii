@@ -1,11 +1,11 @@
 import React, { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
+import { Button } from "@/shared/ui/button"
+import { Input } from "@/shared/ui/input"
+import { Textarea } from "@/shared/ui/textarea"
+import { Select } from "@/shared/ui/select"
+import { Checkbox } from "@/shared/ui/checkbox"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/shared/ui/card"
 import { CheckCircle2, MapPin, AlertCircle, ArrowRight } from "lucide-react"
 import { motion } from "motion/react"
 
@@ -49,10 +49,10 @@ export default function PublicForm() {
   const [senderName, setSenderName] = useState("")
   const [senderPhone, setSenderPhone] = useState("")
   const [senderEmail, setSenderEmail] = useState("")
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
-  
+
   const [isLoading, setIsLoading] = useState(false)
   const [ticketNumber, setTicketNumber] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -71,7 +71,7 @@ export default function PublicForm() {
 
   const validateField = (field: string, value: string) => {
     const newErrors = { ...errors }
-    
+
     switch (field) {
       case 'address':
         if (!value.trim()) {
@@ -125,24 +125,24 @@ export default function PublicForm() {
         }
         break
     }
-    
+
     setErrors(newErrors)
   }
 
   const handleBlur = (field: string) => {
     setTouched({ ...touched, [field]: true })
     const value = field === 'address' ? address :
-                  field === 'description' ? description :
-                  field === 'senderName' ? senderName :
-                  field === 'senderPhone' ? senderPhone :
-                  field === 'senderEmail' ? senderEmail : ''
+      field === 'description' ? description :
+        field === 'senderName' ? senderName :
+          field === 'senderPhone' ? senderPhone :
+            field === 'senderEmail' ? senderEmail : ''
     validateField(field, value)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    
+
     setTouched({
       address: true,
       description: true,
@@ -151,7 +151,7 @@ export default function PublicForm() {
       senderEmail: true,
     })
 
-    
+
     validateField('address', address)
     validateField('description', description)
     if (!isAnonymous) {
@@ -160,7 +160,7 @@ export default function PublicForm() {
       validateField('senderEmail', senderEmail)
     }
 
-    
+
     if (Object.keys(errors).length > 0) {
       return
     }
@@ -178,15 +178,48 @@ export default function PublicForm() {
     setIsLoading(true)
 
     try {
-      
-      
+
+
+      let lat = 56.1326;
+      let lng = 47.2357;
+
+      try {
+        let cleanAddress = address.trim();
+        if (cleanAddress.toLowerCase().startsWith('г. чебоксары')) {
+          cleanAddress = cleanAddress.substring(12).trim();
+        } else if (cleanAddress.toLowerCase().startsWith('чебоксары')) {
+          cleanAddress = cleanAddress.substring(9).trim();
+        }
+
+        cleanAddress = cleanAddress.replace(/^,/, '').trim();
+
+        // Use a structured query targeting Cheboksary specifically for much higher precision
+        const url = new URL("https://nominatim.openstreetmap.org/search");
+        url.searchParams.append("city", "Чебоксары");
+        url.searchParams.append("street", cleanAddress);
+        url.searchParams.append("format", "json");
+        url.searchParams.append("limit", "1");
+
+        const geoRes = await fetch(url.toString());
+        const geoData = await geoRes.json();
+
+        if (geoData && geoData.length > 0) {
+          lat = parseFloat(geoData[0].lat);
+          lng = parseFloat(geoData[0].lon);
+        } else {
+          console.warn("Could not geocode exact address, falling back to default.", cleanAddress);
+        }
+      } catch (e) {
+        console.error("Geocoding failed", e);
+      }
+
       const payload = {
         description: `${description}\n\nАдрес: ${address}`,
         sender_name: isAnonymous ? "Анонимный заявитель" : senderName,
         sender_phone: isAnonymous ? undefined : senderPhone.replace(/\D/g, ''),
         sender_email: isAnonymous ? undefined : senderEmail,
-        longitude: 47.2357, 
-        latitude: 56.1326,
+        longitude: lng,
+        latitude: lat,
         subcategory_id: parseInt(subcategoryId, 10),
       }
 
@@ -256,9 +289,9 @@ export default function PublicForm() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-white">
-      {}
+      { }
       <div className="relative lg:w-5/12 bg-slate-950 text-white overflow-hidden flex flex-col justify-between p-8 lg:p-16">
-        {}
+        { }
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
           <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-600/20 blur-[120px] mix-blend-screen animate-float"></div>
           <div className="absolute top-[40%] -right-[20%] w-[60%] h-[60%] rounded-full bg-indigo-600/20 blur-[100px] mix-blend-screen animate-float-delayed"></div>
@@ -303,7 +336,7 @@ export default function PublicForm() {
               <div>
                 <h3 className="font-semibold text-white mb-1 tracking-wide">Умная маршрутизация</h3>
                 <p className="text-sm text-slate-300 leading-relaxed">
-                  ИИ анализирует текст обращения и автоматически определяет категорию, исключая дубликаты.
+                  Алгоритм анализирует текст обращения и автоматически определяет категорию, исключая дубликаты.
                 </p>
               </div>
             </div>
@@ -311,7 +344,7 @@ export default function PublicForm() {
         </div>
       </div>
 
-      {}
+      { }
       <div className="lg:w-7/12 flex items-center justify-center p-6 lg:p-12 bg-slate-50/50 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
           <div className="absolute top-[10%] right-[10%] w-[30%] h-[30%] rounded-full bg-blue-400/5 blur-[100px] animate-float"></div>
@@ -331,7 +364,7 @@ export default function PublicForm() {
               </CardHeader>
               <CardContent className="p-8 space-y-8">
 
-                {}
+                { }
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div className="space-y-3">
                     <label className="text-sm font-semibold text-slate-700">Категория <span className="text-red-500">*</span></label>
@@ -369,7 +402,7 @@ export default function PublicForm() {
                   </div>
                 </div>
 
-                {}
+                { }
                 <div className="space-y-3">
                   <label className="text-sm font-semibold text-slate-700">Адрес <span className="text-red-500">*</span></label>
                   <Input
@@ -380,9 +413,8 @@ export default function PublicForm() {
                       if (touched.address) validateField('address', e.target.value)
                     }}
                     onBlur={() => handleBlur('address')}
-                    className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-colors ${
-                      touched.address && errors.address ? 'border-red-400 focus:border-red-400' : ''
-                    }`}
+                    className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-colors ${touched.address && errors.address ? 'border-red-400 focus:border-red-400' : ''
+                      }`}
                     required
                   />
                   {touched.address && errors.address && (
@@ -394,7 +426,7 @@ export default function PublicForm() {
                   <p className="text-xs text-slate-500">Укажите полный адрес: город, улица, дом</p>
                 </div>
 
-                {}
+                { }
                 <div className="space-y-3">
                   <label className="text-sm font-semibold text-slate-700">Описание проблемы <span className="text-red-500">*</span></label>
                   <Textarea
@@ -405,9 +437,8 @@ export default function PublicForm() {
                       if (touched.description) validateField('description', e.target.value)
                     }}
                     onBlur={() => handleBlur('description')}
-                    className={`min-h-[140px] rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-colors resize-none p-4 ${
-                      touched.description && errors.description ? 'border-red-400 focus:border-red-400' : ''
-                    }`}
+                    className={`min-h-[140px] rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-colors resize-none p-4 ${touched.description && errors.description ? 'border-red-400 focus:border-red-400' : ''
+                      }`}
                     required
                   />
                   {touched.description && errors.description && (
@@ -419,7 +450,7 @@ export default function PublicForm() {
                   <p className="text-xs text-slate-500">Минимум 20 символов</p>
                 </div>
 
-                {}
+                { }
                 <div className="pt-6 border-t border-slate-100">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-semibold text-slate-900">Контактные данные</h3>
@@ -445,18 +476,17 @@ export default function PublicForm() {
                     >
                       <div className="space-y-3 sm:col-span-2">
                         <label className="text-sm font-medium text-slate-700">ФИО <span className="text-red-500">*</span></label>
-                        <Input 
-                          value={senderName} 
+                        <Input
+                          value={senderName}
                           onChange={(e) => {
                             setSenderName(e.target.value)
                             if (touched.senderName) validateField('senderName', e.target.value)
                           }}
                           onBlur={() => handleBlur('senderName')}
-                          placeholder="Иванов Иван Иванович" 
-                          required={!isAnonymous} 
-                          className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white ${
-                            touched.senderName && errors.senderName ? 'border-red-400 focus:border-red-400' : ''
-                          }`}
+                          placeholder="Иванов Иван Иванович"
+                          required={!isAnonymous}
+                          className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white ${touched.senderName && errors.senderName ? 'border-red-400 focus:border-red-400' : ''
+                            }`}
                         />
                         {touched.senderName && errors.senderName && (
                           <p className="text-sm text-red-600 flex items-center gap-1">
@@ -467,16 +497,15 @@ export default function PublicForm() {
                       </div>
                       <div className="space-y-3">
                         <label className="text-sm font-medium text-slate-700">Телефон <span className="text-red-500">*</span></label>
-                        <Input 
-                          value={senderPhone} 
+                        <Input
+                          value={senderPhone}
                           onChange={(e) => handlePhoneChange(e.target.value)}
                           onBlur={() => handleBlur('senderPhone')}
-                          type="tel" 
-                          placeholder="+7 (999) 000-00-00" 
-                          required={!isAnonymous} 
-                          className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white ${
-                            touched.senderPhone && errors.senderPhone ? 'border-red-400 focus:border-red-400' : ''
-                          }`}
+                          type="tel"
+                          placeholder="+7 (999) 000-00-00"
+                          required={!isAnonymous}
+                          className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white ${touched.senderPhone && errors.senderPhone ? 'border-red-400 focus:border-red-400' : ''
+                            }`}
                         />
                         {touched.senderPhone && errors.senderPhone && (
                           <p className="text-sm text-red-600 flex items-center gap-1">
@@ -487,18 +516,17 @@ export default function PublicForm() {
                       </div>
                       <div className="space-y-3">
                         <label className="text-sm font-medium text-slate-700">Email</label>
-                        <Input 
-                          value={senderEmail} 
+                        <Input
+                          value={senderEmail}
                           onChange={(e) => {
                             setSenderEmail(e.target.value)
                             if (touched.senderEmail) validateField('senderEmail', e.target.value)
                           }}
                           onBlur={() => handleBlur('senderEmail')}
-                          type="email" 
-                          placeholder="ivanov@example.com" 
-                          className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white ${
-                            touched.senderEmail && errors.senderEmail ? 'border-red-400 focus:border-red-400' : ''
-                          }`}
+                          type="email"
+                          placeholder="ivanov@example.com"
+                          className={`h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white ${touched.senderEmail && errors.senderEmail ? 'border-red-400 focus:border-red-400' : ''
+                            }`}
                         />
                         {touched.senderEmail && errors.senderEmail && (
                           <p className="text-sm text-red-600 flex items-center gap-1">

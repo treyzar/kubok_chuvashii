@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Select } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/shared/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card"
+import { Badge } from "@/shared/ui/badge"
+import { Select } from "@/shared/ui/select"
+import { Textarea } from "@/shared/ui/textarea"
 import {
   ArrowLeft,
   MapPin,
@@ -21,10 +21,12 @@ import {
   EyeOff,
   Sparkles,
   XCircle,
-  Loader2
+  Loader2,
+  Plus
 } from "lucide-react"
 import { motion } from "motion/react"
-import { getTicket, getTicketComments, getTicketHistory, updateTicket, hideTicket, deleteTicket, postTicketComment, getDepartments, TicketDetailsResponse, Comment, HistoryEvent, Department } from "@/api/tickets"
+import { getTicket, getTicketComments, getTicketHistory, updateTicket, hideTicket, deleteTicket, postTicketComment, getDepartments, adminGetTags, TicketDetailsResponse, Comment, HistoryEvent, Department, Tag } from "@/api/tickets"
+import { fetchSimilarAppeals, mergeAppeals, type SimilarAppeal } from "@/entities/appeal"
 
 export default function AppealDetail() {
   const { id } = useParams()
@@ -35,20 +37,25 @@ export default function AppealDetail() {
   const [comments, setComments] = useState<Comment[]>([])
   const [history, setHistory] = useState<HistoryEvent[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
+  const [tags, setTags] = useState<Tag[]>([])
+  const [similarAppeals, setSimilarAppeals] = useState<SimilarAppeal[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isMerging, setIsMerging] = useState(false)
 
   const refreshTicket = async () => {
     if (!id) return;
     try {
-      const [ticketRes, commentsRes, historyRes] = await Promise.all([
+      const [ticketRes, commentsRes, historyRes, similarRes] = await Promise.all([
         getTicket(id),
         getTicketComments(id).catch(() => ({ comments: [] })),
-        getTicketHistory(id).catch(() => [])
+        getTicketHistory(id).catch(() => []),
+        fetchSimilarAppeals(id).catch(() => ({ similar: [] }))
       ])
       setTicketData(ticketRes)
       setComments(commentsRes.comments || [])
       setHistory(historyRes || [])
+      setSimilarAppeals(similarRes.similar || [])
     } catch (error) {
       console.error("Failed to fetch ticket data:", error)
     }
@@ -60,10 +67,14 @@ export default function AppealDetail() {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const depsRes = await getDepartments()
+        const [depsRes, tagsRes] = await Promise.all([
+          getDepartments(),
+          adminGetTags()
+        ])
         setDepartments(depsRes.departments || [])
+        setTags(tagsRes.tags || [])
       } catch (error) {
-        console.error("Failed to fetch departments", error)
+        console.error("Failed to fetch departments or tags", error)
       }
       await refreshTicket()
       setIsLoading(false)
@@ -159,6 +170,49 @@ export default function AppealDetail() {
     }
   }
 
+  const handleMergeDuplicate = async (duplicateId: string) => {
+    if (!id) return;
+    
+    if (!confirm('Вы уверены, что хотите объединить эти обращения? Дубликат будет удален, а его данные перенесены в текущее обращение.')) {
+      return;
+    }
+    
+    setIsMerging(true);
+    try {
+      await mergeAppeals(id, [duplicateId]);
+      alert('Обращения успешно объединены!');
+      await refreshTicket();
+    } catch (error: any) {
+      console.error('Не удалось объединить обращения', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Неизвестная ошибка';
+      alert(`Ошибка при объединении: ${errorMessage}`);
+    } finally {
+      setIsMerging(false);
+    }
+  }
+
+  const handleAddTag = async (tagId: number) => {
+    if (!id) return;
+    try {
+      await updateTicket(id, { add_tags: [tagId] });
+      await refreshTicket();
+    } catch (error) {
+      console.error('Не удалось добавить тег', error);
+      alert('Ошибка при добавлении тега');
+    }
+  }
+
+  const handleRemoveTag = async (tagId: number) => {
+    if (!id) return;
+    try {
+      await updateTicket(id, { remove_tags: [tagId] });
+      await refreshTicket();
+    } catch (error) {
+      console.error('Не удалось удалить тег', error);
+      alert('Ошибка при удалении тега');
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -216,14 +270,100 @@ export default function AppealDetail() {
                 </div>
 
                 <div className="border-t border-slate-100/50 pt-6">
-                  <h4 className="font-semibold text-slate-900 mb-3">Текст обращения</h4>
-                  <p className="text-slate-700 bg-slate-50/50 p-5 rounded-xl whitespace-pre-wrap leading-relaxed border border-slate-100/50 shadow-inner">
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Текст обращения</h4>
+                  <p className="text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-900/50 p-5 rounded-xl whitespace-pre-wrap leading-relaxed border border-slate-100/50 dark:border-slate-700/50 shadow-inner">
                     {ticket.description}
                   </p>
                 </div>
+
+                {detail.address && (
+                  <div className="border-t border-slate-100/50 dark:border-slate-700/50 pt-6">
+                    <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-blue-500" />
+                      Адрес
+                    </h4>
+                    <p className="text-slate-700 dark:text-slate-300 bg-blue-50/50 dark:bg-blue-950/30 p-4 rounded-xl leading-relaxed border border-blue-100/50 dark:border-blue-900/50">
+                      {detail.address}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
+
+          {similarAppeals.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ y: -2 }}
+            >
+              <Card className="border-0 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 rounded-2xl bg-gradient-to-br from-amber-50/90 via-yellow-50/90 to-orange-50/90 dark:from-amber-950/40 dark:via-yellow-950/40 dark:to-orange-950/40 relative overflow-hidden backdrop-blur-md border border-amber-200/50 dark:border-amber-800/50">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/20 dark:bg-amber-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-400/20 dark:bg-orange-500/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
+                <CardHeader className="pb-3 relative z-10">
+                  <CardTitle className="text-amber-900 dark:text-amber-100 flex items-center gap-2 text-lg">
+                    <div className="p-1.5 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg shadow-sm">
+                      <Sparkles className="w-4 h-4 text-white animate-pulse-soft" />
+                    </div>
+                    Система ИИ обнаружила возможные дубликаты
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 pt-2 relative z-10 space-y-3">
+                  <p className="text-sm text-amber-900/80 dark:text-amber-100/80 mb-4 leading-relaxed font-medium">
+                    Найдены похожие обращения на основе семантического анализа текста. Вы можете объединить их для упрощения работы.
+                  </p>
+                  <div className="space-y-3">
+                    {similarAppeals.map((similar) => (
+                      <div
+                        key={similar.id}
+                        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-4 rounded-xl border border-amber-200/50 dark:border-amber-800/50 shadow-sm hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                                #{similar.id.substring(0, 8)}
+                              </span>
+                              <Badge className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border-0 text-xs">
+                                {Math.round(similar.similarity_score * 100)}% совпадение
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                              {similar.description}
+                            </p>
+                            {similar.category_name && (
+                              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                                {similar.category_name} → {similar.subcategory_name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleMergeDuplicate(similar.id)}
+                          disabled={isMerging}
+                          className="w-full mt-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-md shadow-orange-500/20 dark:shadow-orange-500/10 rounded-lg h-9 transition-all font-semibold"
+                        >
+                          {isMerging ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Объединение...
+                            </>
+                          ) : (
+                            <>
+                              <LinkIcon className="w-4 h-4 mr-2" />
+                              Объединить
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }}>
             <Card className="border-0 shadow-sm hover:shadow-lg transition-all duration-300 rounded-2xl bg-white/90 backdrop-blur-sm">
@@ -320,18 +460,40 @@ export default function AppealDetail() {
                   </Select>
                 </div>
                 <div className="space-y-2.5">
-                  <label className="text-sm font-semibold text-slate-700">Внутренние теги</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Внутренние теги</label>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {(ticket.tag_names || []).map((tagName, index) => (
-                      <Badge key={ticket.tag_ids?.[index] || index} variant="secondary" className="flex items-center gap-1.5 bg-slate-100/80 text-slate-700 hover:bg-slate-200 rounded-lg py-1 px-2.5 border border-slate-200/50 shadow-sm">
-                        {tagName} <XCircle className="w-3.5 h-3.5 cursor-pointer hover:text-red-500 transition-colors" />
-                      </Badge>
-                    ))}
+                    {(ticket.tag_names || []).map((tagName, index) => {
+                      const tagId = ticket.tag_ids?.[index];
+                      return (
+                        <Badge 
+                          key={tagId || index} 
+                          variant="secondary" 
+                          className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg py-1 px-2.5 border border-slate-200/50 dark:border-slate-700/50 shadow-sm"
+                        >
+                          {tagName} 
+                          <XCircle 
+                            className="w-3.5 h-3.5 cursor-pointer hover:text-red-500 transition-colors" 
+                            onClick={() => tagId && handleRemoveTag(tagId)}
+                          />
+                        </Badge>
+                      );
+                    })}
                   </div>
-                  <Select defaultValue="" className="h-11 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white transition-colors">
+                  <Select 
+                    value="" 
+                    onChange={(e) => {
+                      const tagId = parseInt(e.target.value);
+                      if (tagId) {
+                        handleAddTag(tagId);
+                        e.target.value = "";
+                      }
+                    }}
+                    className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors"
+                  >
                     <option value="" disabled>Добавить тег</option>
-                    <option value="urgent">Срочно</option>
-                    <option value="check">Требует проверки</option>
+                    {tags.filter(tag => !ticket.tag_ids?.includes(tag.id)).map(tag => (
+                      <option key={tag.id} value={tag.id}>{tag.name}</option>
+                    ))}
                   </Select>
                 </div>
               </CardContent>

@@ -13,26 +13,23 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvector/pgvector-go"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
 	ctx := context.Background()
 
-	
 	config := internal.LoadAppConfig()
 
-	
 	pool, repo, _ := internal.DatabaseConnect(ctx, config)
 	defer pool.Close()
 
 	log.Println("🚀 Starting mock data generation...")
 
-	
 	if err := cleanData(ctx, pool); err != nil {
 		log.Fatalf("Failed to clean data: %v", err)
 	}
 
-	
 	if err := generateMockData(ctx, repo, pool); err != nil {
 		log.Fatalf("Failed to generate mock data: %v", err)
 	}
@@ -75,31 +72,27 @@ func cleanData(ctx context.Context, pool *pgxpool.Pool) error {
 }
 
 func generateMockData(ctx context.Context, repo *repository.Queries, pool *pgxpool.Pool) error {
-	
+
 	log.Println("📚 Creating dictionaries...")
 	if err := createDictionaries(ctx, repo); err != nil {
 		return err
 	}
 
-	
 	log.Println("👥 Creating users...")
-	if err := createUsers(ctx, repo); err != nil {
+	if err := createUsers(ctx, pool); err != nil {
 		return err
 	}
 
-	
 	log.Println("🎫 Creating tickets with AI embeddings...")
 	if err := createTickets(ctx, repo); err != nil {
 		return err
 	}
 
-	
 	log.Println("💬 Adding comments...")
 	if err := createComments(ctx, repo); err != nil {
 		return err
 	}
 
-	
 	log.Println("🏷️  Adding tags...")
 	if err := createTags(ctx, repo); err != nil {
 		return err
@@ -109,7 +102,7 @@ func generateMockData(ctx context.Context, repo *repository.Queries, pool *pgxpo
 }
 
 func createDictionaries(ctx context.Context, repo *repository.Queries) error {
-	
+
 	categories := []string{
 		"ЖКХ",
 		"Дороги и транспорт",
@@ -127,7 +120,6 @@ func createDictionaries(ctx context.Context, repo *repository.Queries) error {
 		}
 	}
 
-	
 	subcategories := map[int32][]string{
 		1: {"Отопление", "Водоснабжение", "Электроснабжение", "Газоснабжение", "Плата за услуги"},
 		2: {"Ремонт дорог", "Уборка дорог", "Освещение дорог", "Общественный транспорт", "Парковки"},
@@ -150,7 +142,6 @@ func createDictionaries(ctx context.Context, repo *repository.Queries) error {
 		}
 	}
 
-	
 	departments := []string{
 		"Администрация города Чебоксары",
 		"Отдел ЖКХ",
@@ -168,7 +159,6 @@ func createDictionaries(ctx context.Context, repo *repository.Queries) error {
 		}
 	}
 
-	
 	tags := []string{
 		"Срочно",
 		"Требует проверки",
@@ -185,7 +175,6 @@ func createDictionaries(ctx context.Context, repo *repository.Queries) error {
 		}
 	}
 
-	
 	sources := []string{
 		"Веб-форма",
 		"Госуслуги",
@@ -204,47 +193,89 @@ func createDictionaries(ctx context.Context, repo *repository.Queries) error {
 	return nil
 }
 
-func createUsers(ctx context.Context, repo *repository.Queries) error {
-	users := []struct {
-		id           string
-		email        string
-		role         repository.UserRole
-		status       repository.UserStatus
-		departmentID *int32
-		firstName    string
-		lastName     string
-		middleName   string
-	}{
-		
-		{"11111111-1111-1111-1111-111111111111", "admin@cheboksary.ru", repository.UserRoleAdmin, repository.UserStatusActive, ptr(int32(1)), "Иван", "Иванов", "Иванович"},
+func createUsers(ctx context.Context, pool *pgxpool.Pool) error {
+	type TestUser struct {
+		ID           string
+		Email        string
+		Password     string
+		Role         repository.UserRole
+		Status       repository.UserStatus
+		DepartmentID *int32
+		FirstName    string
+		LastName     string
+		MiddleName   string
+	}
 
-		
-		{"22222222-2222-2222-2222-222222222222", "roi.gkh@cheboksary.ru", repository.UserRoleOrg, repository.UserStatusActive, ptr(int32(2)), "Петр", "Петров", "Петрович"},
-		{"33333333-3333-3333-3333-333333333333", "roi.roads@cheboksary.ru", repository.UserRoleOrg, repository.UserStatusActive, ptr(int32(3)), "Сергей", "Сергеев", "Сергеевич"},
-		{"44444444-4444-4444-4444-444444444444", "roi.improvement@cheboksary.ru", repository.UserRoleOrg, repository.UserStatusActive, ptr(int32(4)), "Мария", "Смирнова", "Александровна"},
-		{"99999999-9999-9999-9999-999999999999", "roi.health@cheboksary.ru", repository.UserRoleOrg, repository.UserStatusBlocked, ptr(int32(6)), "Анна", "Антонова", "Андреевна"},
-
-		
-		{"55555555-5555-5555-5555-555555555555", "executor1@cheboksary.ru", repository.UserRoleExecutor, repository.UserStatusActive, ptr(int32(2)), "Алексей", "Алексеев", "Алексеевич"},
-		{"66666666-6666-6666-6666-666666666666", "executor2@cheboksary.ru", repository.UserRoleExecutor, repository.UserStatusActive, ptr(int32(2)), "Ольга", "Орлова", "Олеговна"},
-		{"77777777-7777-7777-7777-777777777777", "executor3@cheboksary.ru", repository.UserRoleExecutor, repository.UserStatusActive, ptr(int32(3)), "Дмитрий", "Дмитриев", "Дмитриевич"},
-		{"88888888-8888-8888-8888-888888888888", "executor4@cheboksary.ru", repository.UserRoleExecutor, repository.UserStatusActive, ptr(int32(4)), "Елена", "Егорова", "Евгеньевна"},
-		{"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "executor5@cheboksary.ru", repository.UserRoleExecutor, repository.UserStatusBlocked, ptr(int32(5)), "Николай", "Николаев", "Николаевич"},
+	users := []TestUser{
+		{
+			ID: "11111111-1111-1111-1111-111111111111", Email: "admin@crm.local", Password: "admin123",
+			Role: repository.UserRoleAdmin, Status: repository.UserStatusActive, DepartmentID: nil,
+			FirstName: "Администратор", LastName: "Системный", MiddleName: "",
+		},
+		{
+			ID: "22222222-2222-2222-2222-222222222222", Email: "gkh@crm.local", Password: "gkh123",
+			Role: repository.UserRoleExecutor, Status: repository.UserStatusActive, DepartmentID: ptr(int32(1)),
+			FirstName: "Иван", LastName: "Петров", MiddleName: "Сергеевич",
+		},
+		{
+			ID: "33333333-3333-3333-3333-333333333333", Email: "transport@crm.local", Password: "transport123",
+			Role: repository.UserRoleExecutor, Status: repository.UserStatusActive, DepartmentID: ptr(int32(2)),
+			FirstName: "Мария", LastName: "Иванова", MiddleName: "Александровна",
+		},
+		{
+			ID: "44444444-4444-4444-4444-444444444444", Email: "ecology@crm.local", Password: "ecology123",
+			Role: repository.UserRoleExecutor, Status: repository.UserStatusActive, DepartmentID: ptr(int32(8)),
+			FirstName: "Алексей", LastName: "Смирнов", MiddleName: "Викторович",
+		},
 	}
 
 	for _, u := range users {
-		id, _ := uuid.Parse(u.id)
-		if _, err := repo.CreateUser(ctx, repository.CreateUserParams{
-			ID:           id,
-			Email:        u.email,
-			Role:         u.role,
-			Status:       u.status,
-			DepartmentID: u.departmentID,
-			FirstName:    &u.firstName,
-			LastName:     &u.lastName,
-			MiddleName:   &u.middleName,
-		}); err != nil {
-			return err
+		id, _ := uuid.Parse(u.ID)
+
+		hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("failed to hash password for %s: %w", u.Email, err)
+		}
+
+		query := `
+			INSERT INTO users (
+				id, email, role, status, 
+				first_name, last_name, middle_name, password_hash, department_id
+			) VALUES (
+				$1, $2, $3, $4,
+				$5, $6, $7, $8, $9
+			)
+			ON CONFLICT (email) DO UPDATE SET
+				password_hash = EXCLUDED.password_hash,
+				role = EXCLUDED.role,
+				status = EXCLUDED.status,
+				department_id = EXCLUDED.department_id,
+				first_name = EXCLUDED.first_name,
+				last_name = EXCLUDED.last_name,
+				middle_name = EXCLUDED.middle_name
+		`
+
+		var middleNamePtr *string
+		if u.MiddleName != "" {
+			middleNamePtr = &u.MiddleName
+		}
+
+		_, err = pool.Exec(
+			ctx,
+			query,
+			id,
+			u.Email,
+			u.Role,
+			u.Status,
+			&u.FirstName,
+			&u.LastName,
+			middleNamePtr,
+			string(hash),
+			u.DepartmentID,
+		)
+
+		if err != nil {
+			return fmt.Errorf("failed to insert user %s: %w", u.Email, err)
 		}
 	}
 
@@ -269,9 +300,9 @@ type TicketData struct {
 }
 
 func createTickets(ctx context.Context, repo *repository.Queries) error {
-	
+
 	tickets := []TicketData{
-		
+
 		{
 			description:   "В нашем доме на улице Ленина 45 уже неделю нет отопления. Температура в квартирах опустилась до 15 градусов. Жильцы, особенно дети и пожилые люди, мерзнут. Просим срочно решить проблему!",
 			subcategoryID: 1, status: repository.TicketStatusClosed, departmentID: ptr(int32(2)),
@@ -315,7 +346,6 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 			lat: 56.1350, lng: 47.2530,
 		},
 
-		
 		{
 			description:   "Холодные батареи в доме на улице Ленина 67. Отопление работает, но температура в квартирах всего 18 градусов. Возможно, проблема с циркуляцией или давлением в системе.",
 			subcategoryID: 1, status: repository.TicketStatusOpen, departmentID: ptr(int32(2)),
@@ -359,7 +389,6 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 			lat: 56.1360, lng: 47.2540,
 		},
 
-		
 		{
 			description:   "Протечка крыши в подъезде дома №5 на улице Пушкина. Вода течет по стенам, образовалась плесень. Штукатурка отваливается. Опасно для здоровья жильцов!",
 			subcategoryID: 14, status: repository.TicketStatusOpen, departmentID: ptr(int32(2)),
@@ -403,7 +432,6 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 			lat: 56.1285, lng: 47.2465,
 		},
 
-		
 		{
 			description:   "Счета за ЖКУ выросли в 2 раза за последние 3 месяца без объяснения причин. Тарифы вроде не менялись, потребление тоже. Просим разобраться в ситуации и пересчитать.",
 			subcategoryID: 5, status: repository.TicketStatusInit, departmentID: nil,
@@ -439,20 +467,64 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 			senderName: "Васильева Екатерина Александровна", senderPhone: ptr("+7 900 890 12 34"), senderEmail: nil,
 			lat: 56.1355, lng: 47.2535,
 		},
+		{
+			description:   "В нашем доме на улице Ленина 45 уже неделю нет отопления. Температура в квартирах опустилась до 15 градусов. Жильцы, особенно дети и пожилые люди, мерзнут.",
+			subcategoryID: 1, status: repository.TicketStatusOpen, departmentID: ptr(int32(2)),
+			createdAt:  time.Now().Add(-7 * 24 * time.Hour),
+			senderName: "Иванов Иван Иванович", senderPhone: ptr("+79001234567"), senderEmail: ptr("ivanov@example.com"),
+			lat: 56.1324, lng: 47.2501,
+		},
+		{
+			description:   "Холодные батареи в доме на улице Ленина 45. Отопление не работает уже 6 дней. В квартирах очень холодно, температура около 16 градусов. Дети болеют.",
+			subcategoryID: 1, status: repository.TicketStatusOpen, departmentID: ptr(int32(2)),
+			createdAt:  time.Now().Add(-6 * 24 * time.Hour),
+			senderName: "Петрова Мария Сергеевна", senderPhone: ptr("+79002345678"), senderEmail: nil,
+			lat: 56.1325, lng: 47.2502,
+		},
+		{
+			description:   "Дом 45 по улице Ленина без отопления. Прошла неделя, а батареи холодные. Температура в помещениях 15-16 градусов. Просим срочно решить проблему!",
+			subcategoryID: 1, status: repository.TicketStatusInit, departmentID: nil,
+			createdAt:  time.Now().Add(-5 * 24 * time.Hour),
+			senderName: "Смирнов Алексей Викторович", senderPhone: nil, senderEmail: ptr("smirnov@example.com"),
+			lat: 56.1323, lng: 47.2500,
+		},
+
+		// === ГРУППА 2: Ямы на дорогах ===
+		{
+			description:   "На перекрестке улиц Гагарина и Мира образовалась огромная яма глубиной около 30 см. Несколько машин уже повредили колеса. Требуется срочный ремонт дорожного покрытия.",
+			subcategoryID: 6, status: repository.TicketStatusOpen, departmentID: ptr(int32(3)),
+			createdAt:  time.Now().Add(-10 * 24 * time.Hour),
+			senderName: "Волков Дмитрий Александрович", senderPhone: ptr("+79003456789"), senderEmail: ptr("volkov@example.com"),
+			lat: 56.1340, lng: 47.2520,
+		},
+		{
+			description:   "Огромная яма на перекрестке Гагарина и Мира. Глубина примерно 25-30 см, ширина около метра. Машины объезжают по встречной полосе. Очень опасно!",
+			subcategoryID: 6, status: repository.TicketStatusOpen, departmentID: ptr(int32(3)),
+			createdAt:  time.Now().Add(-9 * 24 * time.Hour),
+			senderName: "Новикова Елена Сергеевна", senderPhone: nil, senderEmail: ptr("novikova@example.com"),
+			lat: 56.1341, lng: 47.2521,
+		},
+
+		// === Уникальные и прочие обращения ===
+		{
+			description:   "Из крана течет ржавая вода с неприятным запахом.",
+			subcategoryID: 2, status: repository.TicketStatusOpen, departmentID: ptr(int32(2)),
+			createdAt:  time.Now().Add(-3 * 24 * time.Hour),
+			senderName: "Федорова Наталья Ивановна", senderPhone: ptr("+79001234560"), senderEmail: ptr("fedorova@example.com"),
+			lat: 56.1335, lng: 47.2515,
+		},
 	}
 
 	for i, t := range tickets {
 		log.Printf("  Creating ticket %d/%d: %s...", i+1, len(tickets), t.description[:50])
 
-		
 		embedding, err := embeddings.GetEmbedding(t.description)
 		if err != nil {
 			log.Printf("    ⚠️  Warning: Failed to generate embedding, using fallback: %v", err)
-			
+
 			embedding = createFallbackEmbedding()
 		}
 
-		
 		ticket, err := repo.CreateTicketWithDefaults(ctx, repository.CreateTicketWithDefaultsParams{
 			Description:   t.description,
 			SubcategoryID: t.subcategoryID,
@@ -463,7 +535,6 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 			return fmt.Errorf("failed to create ticket: %w", err)
 		}
 
-		
 		if t.status != repository.TicketStatusInit {
 			if _, err := repo.UpdateTicketSimple(ctx, repository.UpdateTicketSimpleParams{
 				ID: ticket.ID,
@@ -476,7 +547,6 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 			}
 		}
 
-		
 		if err := repo.UpdateTicketCreatedAt(ctx, repository.UpdateTicketCreatedAtParams{
 			ID:        ticket.ID,
 			CreatedAt: t.createdAt,
@@ -484,7 +554,6 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 			return err
 		}
 
-		
 		geoLocation := fmt.Sprintf("POINT(%f %f)", t.lng, t.lat)
 		if _, err := repo.CreateComplaint(ctx, repository.CreateComplaintParams{
 			Ticket:      ticket.ID,
@@ -497,7 +566,6 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 			return err
 		}
 
-		
 		newValue := fmt.Sprintf(`{"status": "%s", "subcategory_id": %d}`, t.status, t.subcategoryID)
 		if _, err := repo.CreateHistoryEntry(ctx, repository.CreateHistoryEntryParams{
 			TicketID: ticket.ID,
@@ -507,7 +575,6 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 			return err
 		}
 
-		
 		if t.status != repository.TicketStatusInit {
 			oldValue := `{"status": "init"}`
 			newValue := fmt.Sprintf(`{"status": "%s"}`, t.status)
@@ -527,7 +594,7 @@ func createTickets(ctx context.Context, repo *repository.Queries) error {
 }
 
 func createFallbackEmbedding() *pgvector.Vector {
-	
+
 	emb := make([]float32, 768)
 	for i := range emb {
 		emb[i] = float32(i) / 768.0
@@ -537,20 +604,20 @@ func createFallbackEmbedding() *pgvector.Vector {
 }
 
 func createComments(ctx context.Context, repo *repository.Queries) error {
-	
+
 	tickets, err := repo.ListAllTickets(ctx)
 	if err != nil {
 		return err
 	}
 
 	comments := map[string][]string{
-		
+
 		"closed": {
 			"Заявка принята в работу",
 			"Специалист выехал на место",
 			"Проблема устранена, работы завершены",
 		},
-		
+
 		"open": {
 			"Заявка зарегистрирована",
 			"Передано в профильный отдел",
@@ -583,44 +650,39 @@ func createComments(ctx context.Context, repo *repository.Queries) error {
 }
 
 func createTags(ctx context.Context, repo *repository.Queries) error {
-	
+
 	tickets, err := repo.ListAllTickets(ctx)
 	if err != nil {
 		return err
 	}
 
-	
 	for _, ticket := range tickets {
 		var tags []int32
 
-		
 		if ticket.Status == repository.TicketStatusOpen {
 			age := time.Since(ticket.CreatedAt)
 			if age > 7*24*time.Hour {
-				tags = append(tags, 1) 
+				tags = append(tags, 1)
 			}
 			if age > 10*24*time.Hour {
-				tags = append(tags, 4) 
+				tags = append(tags, 4)
 			}
 		}
 
-		
 		if ticket.SubcategoryID == 5 || ticket.SubcategoryID == 18 {
-			tags = append(tags, 2) 
+			tags = append(tags, 2)
 		}
 
-		
 		if ticket.SubcategoryID == 15 || ticket.SubcategoryID == 29 {
-			tags = append(tags, 5) 
+			tags = append(tags, 5)
 		}
 
-		
 		for _, tagID := range tags {
 			if _, err := repo.AddTagsToTicket(ctx, repository.AddTagsToTicketParams{
 				Ticket: ticket.ID,
 				Tags:   []int32{tagID},
 			}); err != nil {
-				
+
 				continue
 			}
 		}
@@ -634,19 +696,15 @@ func printSummary(ctx context.Context, repo *repository.Queries) {
 	log.Println("📊 MOCK DATA SUMMARY")
 	log.Println(strings.Repeat("=", 50))
 
-	
 	categories, _ := repo.GetCategories(ctx)
 	log.Printf("Categories: %d", len(categories))
 
-	
 	departments, _ := repo.GetDepartments(ctx)
 	log.Printf("Departments: %d", len(departments))
 
-	
 	users, _ := repo.ListUsers(ctx, repository.ListUsersParams{Limit: 1000})
 	log.Printf("Users: %d", len(users))
 
-	
 	allTickets, _ := repo.ListAllTickets(ctx)
 	var closed, open, init int
 	for _, t := range allTickets {
@@ -665,14 +723,12 @@ func printSummary(ctx context.Context, repo *repository.Queries) {
 	log.Printf("  - Open: %d", open)
 	log.Printf("  - Init: %d", init)
 
-	
 	overdue, _ := repo.GetOverdueTickets(ctx, repository.GetOverdueTicketsParams{
 		MinLostDays: 0,
 		Limit:       1000,
 	})
 	log.Printf("  - Overdue: %d", len(overdue))
 
-	
 	commentCount := 0
 	for _, t := range allTickets {
 		comments, _ := repo.GetCommentsForTicket(ctx, repository.GetCommentsForTicketParams{Ticket: t.ID})
@@ -680,6 +736,12 @@ func printSummary(ctx context.Context, repo *repository.Queries) {
 	}
 	log.Printf("Comments: %d", commentCount)
 
+	log.Println(strings.Repeat("=", 50))
+	log.Println("📋 Test Credentials for CRM:")
+	log.Println("   • admin@crm.local / admin123 (Admin)")
+	log.Println("   • gkh@crm.local / gkh123 (ЖКХ, Dept: Отдел ЖКХ)")
+	log.Println("   • transport@crm.local / transport123 (Транспорт, Dept: Дорожный отдел)")
+	log.Println("   • ecology@crm.local / ecology123 (Экология, Dept: Экологический отдел)")
 	log.Println(strings.Repeat("=", 50))
 	log.Println("✨ Ready for frontend integration!")
 	log.Println(strings.Repeat("=", 50))

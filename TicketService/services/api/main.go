@@ -174,6 +174,14 @@ func MountRoutes(api huma.API, repo *repository.Queries, pool *pgxpool.Pool, red
 			Description: "Merge duplicate tickets",
 			Tags:        []string{"Tickets"},
 		}, ticketHandler.Merge)
+
+		huma.Register(api, huma.Operation{
+			OperationID: "get-similar-tickets",
+			Method:      http.MethodGet,
+			Path:        "/tickets/{id}/similar",
+			Description: "Get similar tickets based on AI embedding similarity",
+			Tags:        []string{"Tickets"},
+		}, ticketHandler.GetSimilar)
 	}
 
 	statisticsHandler := handlers.StatisticsHandler{Repo: repo}

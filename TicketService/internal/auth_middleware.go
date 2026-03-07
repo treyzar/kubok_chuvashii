@@ -38,6 +38,9 @@ func AuthMiddleware(repo *repository.Queries) gin.HandlerFunc {
 		authUser := &AuthUser{
 			ID:           user.ID,
 			Email:        user.Email,
+			FirstName:    user.FirstName,
+			LastName:     user.LastName,
+			MiddleName:   user.MiddleName,
 			Role:         user.Role,
 			DepartmentID: user.DepartmentID,
 		}

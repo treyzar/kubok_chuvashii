@@ -53,7 +53,7 @@ department_stats AS (
         COUNT(CASE WHEN v.is_overdue THEN 1 END) as overdue,
         AVG(CASE 
             WHEN t.status = 'closed' AND tcl.closed_date IS NOT NULL
-            THEN EXTRACT(EPOCH FROM (tcl.closed_date - COALESCE(tc.created_date, t.created_at))) / 86400.0
+            THEN GREATEST(EXTRACT(EPOCH FROM (tcl.closed_date - COALESCE(tc.created_date, t.created_at))) / 86400.0, 0)
         END) as avg_resolution_days
     FROM departments d
     LEFT JOIN tickets t ON t.department_id = d.id AND t.is_deleted = false AND t.is_hidden = false
@@ -123,7 +123,7 @@ first_response AS (
 ),
 avg_response AS (
     SELECT 
-        COALESCE(AVG(EXTRACT(EPOCH FROM (fr.first_response_date - tc.created_date)) / 86400.0), 0) as avg_days
+        COALESCE(AVG(GREATEST(EXTRACT(EPOCH FROM (fr.first_response_date - tc.created_date)) / 86400.0, 0)), 0) as avg_days
     FROM tickets t
     INNER JOIN ticket_created tc ON tc.ticket_id = t.id
     CROSS JOIN period_filter pf

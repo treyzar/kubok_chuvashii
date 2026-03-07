@@ -9,6 +9,7 @@
       "DOM",
       "DOM.Iterable"
     ],
+    "types": ["node"],
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "isolatedModules": true,
@@ -18,6 +19,24 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@/app/*": [
+        "./src/app/*"
+      ],
+      "@/pages/*": [
+        "./src/pages/*"
+      ],
+      "@/widgets/*": [
+        "./src/widgets/*"
+      ],
+      "@/features/*": [
+        "./src/features/*"
+      ],
+      "@/entities/*": [
+        "./src/entities/*"
+      ],
+      "@/shared/*": [
+        "./src/shared/*"
       ]
     },
     "allowImportingTsExtensions": true,

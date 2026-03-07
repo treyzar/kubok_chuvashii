@@ -537,3 +537,76 @@ func (q *Queries) UpdateTicketSimple(ctx context.Context, arg UpdateTicketSimple
 	err := row.Scan(&i.Status, &i.DepartmentID)
 	return i, err
 }
+
+const getSimilarTickets = `-- name: GetSimilarTickets :many
+SELECT
+  t.id,
+  t.status,
+  t.description,
+  t.subcategory_id,
+  t.department_id,
+  c.name AS category_name,
+  sc.name AS subcategory_name,
+  d.name AS department_name,
+  (1 - (t.embedding <=> target.embedding))::FLOAT AS similarity_score
+FROM tickets t
+CROSS JOIN (SELECT embedding FROM tickets WHERE id = $1) AS target
+LEFT JOIN subcategories sc ON sc.id = t.subcategory_id
+LEFT JOIN categories c ON c.id = sc.category_id
+LEFT JOIN departments d ON d.id = t.department_id
+WHERE t.id != $1
+  AND t.is_hidden = false 
+  AND t.is_deleted = false
+  AND t.embedding IS NOT NULL
+  AND target.embedding IS NOT NULL
+  AND t.status IN ('init', 'open')
+  AND (1 - (t.embedding <=> target.embedding)) > 0.80
+ORDER BY similarity_score DESC
+LIMIT 5
+`
+
+type GetSimilarTicketsParams struct {
+	TargetID uuid.UUID `json:"target_id"`
+}
+
+type GetSimilarTicketsRow struct {
+	ID              uuid.UUID    `json:"id"`
+	Status          TicketStatus `json:"status"`
+	Description     string       `json:"description"`
+	SubcategoryID   int32        `json:"subcategory_id"`
+	DepartmentID    *int32       `json:"department_id"`
+	CategoryName    *string      `json:"category_name"`
+	SubcategoryName *string      `json:"subcategory_name"`
+	DepartmentName  *string      `json:"department_name"`
+	SimilarityScore float64      `json:"similarity_score"`
+}
+
+func (q *Queries) GetSimilarTickets(ctx context.Context, arg GetSimilarTicketsParams) ([]GetSimilarTicketsRow, error) {
+	rows, err := q.db.Query(ctx, getSimilarTickets, arg.TargetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSimilarTicketsRow
+	for rows.Next() {
+		var i GetSimilarTicketsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Status,
+			&i.Description,
+			&i.SubcategoryID,
+			&i.DepartmentID,
+			&i.CategoryName,
+			&i.SubcategoryName,
+			&i.DepartmentName,
+			&i.SimilarityScore,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -1,6 +1,6 @@
 
 
-import RU_LOCALIZATION, { getStatusLabel, getStatusOptions, getErrorMessage } from '../localization';
+import RU_LOCALIZATION, { getStatusLabel, getStatusOptions, getErrorMessage } from '@/shared/lib/localization';
 import {
   formatDateShort,
   formatDateTime,
@@ -12,14 +12,14 @@ import {
   isValidDateRange,
   formatRelativeTime,
   RUSSIAN_MONTHS,
-} from '../dateUtils';
+} from '@/shared/lib/date-utils';
 import {
   isFilterActive,
   hasActiveFilters,
   countActiveFilters,
   buildSearchParams,
   parseSearchParams,
-} from '../filterUtils';
+} from '@/shared/lib/filter-utils';
 
 
 console.log('=== Localization Strings ===');

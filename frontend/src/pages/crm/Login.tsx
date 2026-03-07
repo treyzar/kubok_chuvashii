@@ -1,9 +1,9 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Card } from '../../components/ui/card';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { Card } from '@/shared/ui/card';
 import { ArrowLeft } from 'lucide-react';
 
 export default function Login() {

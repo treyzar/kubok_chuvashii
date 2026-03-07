@@ -160,3 +160,29 @@ UPDATE tickets SET created_at = $2 WHERE id = $1;
 
 -- name: ListAllTickets :many
 SELECT * FROM tickets WHERE is_deleted = false ORDER BY created_at DESC;
+
+-- name: GetSimilarTickets :many
+SELECT
+  t.id,
+  t.status,
+  t.description,
+  t.subcategory_id,
+  t.department_id,
+  c.name AS category_name,
+  sc.name AS subcategory_name,
+  d.name AS department_name,
+  (1 - (t.embedding <=> target.embedding))::FLOAT AS similarity_score
+FROM tickets t
+CROSS JOIN (SELECT embedding FROM tickets WHERE id = sqlc.arg('target_id')) AS target
+LEFT JOIN subcategories sc ON sc.id = t.subcategory_id
+LEFT JOIN categories c ON c.id = sc.category_id
+LEFT JOIN departments d ON d.id = t.department_id
+WHERE t.id != sqlc.arg('target_id')
+  AND t.is_hidden = false 
+  AND t.is_deleted = false
+  AND t.embedding IS NOT NULL
+  AND target.embedding IS NOT NULL
+  AND t.status IN ('init', 'open')
+  AND (1 - (t.embedding <=> target.embedding)) > 0.70
+ORDER BY similarity_score DESC
+LIMIT 10;

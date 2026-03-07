@@ -46,9 +46,9 @@ func (h *CommentsHandler) Post(ctx context.Context, req *PostCommentRequest) (*P
 	var userEmail *string
 	authUser := internal.GetUserFromContext(ctx)
 	if authUser != nil {
-		email := authUser.Email
-		userName = &email 
-		userEmail = &email
+		fullName := authUser.GetFullName()
+		userName = &fullName
+		userEmail = &authUser.Email
 	} else {
 		userName = req.Body.UserName
 		userEmail = req.Body.UserEmail

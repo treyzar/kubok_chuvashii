@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState, useRef } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Select } from "@/components/ui/select"
+import React, { useEffect, useMemo, useState, useRef } from "react"
+import { Card, CardContent } from "@/shared/ui/card"
+import { Select } from "@/shared/ui/select"
 import { MapContainer, TileLayer } from 'react-leaflet'
 import { MapPin, Flame, TrendingUp, AlertTriangle, Calendar, BarChart3, Loader2 } from "lucide-react"
 import 'leaflet/dist/leaflet.css'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, useInView } from "motion/react"
 import HeatLayer from "@/components/HeatLayer"
 import { getHeatmapPoints, getHeatmapStats, fetchCategories, Category } from "@/api/tickets"
-import RU_LOCALIZATION from "@/lib/localization"
+import RU_LOCALIZATION from "@/shared/lib/localization"
 
 type TimePeriod = 'week' | 'month' | 'year'
 
@@ -86,7 +86,7 @@ export default function Heatmap() {
       try {
         const params = {
           period: timePeriod,
-          categories: Array.from(activeCategories)
+          categories: Array.from(activeCategories) as number[]
         }
         const response = await getHeatmapPoints(params)
         
@@ -204,14 +204,38 @@ export default function Heatmap() {
 
       {}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        {[
-          { icon: <BarChart3 className="w-5 h-5 text-blue-600" />, label: "Всего обращений", value: stats.total, accent: "blue", decimals: 0 },
-          { icon: <MapPin className="w-5 h-5 text-emerald-600" />, label: "Точек на карте", value: stats.pointCount, accent: "emerald", decimals: 0 },
-          { icon: <TrendingUp className="w-5 h-5 text-amber-600" />, label: "Ср. на точку", value: stats.avg, accent: "amber", decimals: 1 },
-          { icon: <AlertTriangle className="w-5 h-5 text-red-600" />, label: "Макс. точка", value: stats.maxPoint?.count ?? 0, accent: "red", decimals: 0 },
-        ].map((card, i) => (
-          <StatCard key={card.label} index={i} {...card} />
-        ))}
+        <StatCard 
+          index={0} 
+          icon={<BarChart3 className="w-5 h-5 text-blue-600" />} 
+          label="Всего обращений" 
+          value={stats.total} 
+          accent="blue" 
+          decimals={0} 
+        />
+        <StatCard 
+          index={1} 
+          icon={<MapPin className="w-5 h-5 text-emerald-600" />} 
+          label="Точек на карте" 
+          value={stats.pointCount} 
+          accent="emerald" 
+          decimals={0} 
+        />
+        <StatCard 
+          index={2} 
+          icon={<TrendingUp className="w-5 h-5 text-amber-600" />} 
+          label="Ср. на точку" 
+          value={stats.avg} 
+          accent="amber" 
+          decimals={1} 
+        />
+        <StatCard 
+          index={3} 
+          icon={<AlertTriangle className="w-5 h-5 text-red-600" />} 
+          label="Макс. точка" 
+          value={stats.maxPoint?.count ?? 0} 
+          accent="red" 
+          decimals={0} 
+        />
       </div>
 
       {}
@@ -544,7 +568,7 @@ export default function Heatmap() {
 }
 
 
-function StatCard({ icon, label, value, subtitle, accent, index, decimals = 0 }: {
+interface StatCardProps {
   icon: React.ReactNode
   label: string
   value: number
@@ -552,7 +576,9 @@ function StatCard({ icon, label, value, subtitle, accent, index, decimals = 0 }:
   accent: string
   index: number
   decimals?: number
-}) {
+}
+
+function StatCard({ icon, label, value, subtitle, accent, index, decimals = 0 }: StatCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
 

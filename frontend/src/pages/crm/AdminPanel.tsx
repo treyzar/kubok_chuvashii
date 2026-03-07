@@ -1,9 +1,9 @@
 import { useState, useEffect, React } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card"
+import { Button } from "@/shared/ui/button"
+import { Input } from "@/shared/ui/input"
+import { Select } from "@/shared/ui/select"
+import { Badge } from "@/shared/ui/badge"
 import {
   Users, Settings, Plus, Edit2, Trash2, Search, XCircle,
   Loader2, X, CheckCircle, AlertCircle, ChevronDown, ChevronRight, Tag as TagIcon, Layers

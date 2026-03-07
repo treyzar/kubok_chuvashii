@@ -70,6 +70,7 @@ export interface ComplaintDetails {
     sender_email: string | null;
     latitude: number;
     longitude: number;
+    address?: string | null;
 }
 
 export interface TicketDetailsResponse {

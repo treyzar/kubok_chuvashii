@@ -14,8 +14,41 @@ const userContextKey contextKey = "user"
 type AuthUser struct {
 	ID           uuid.UUID
 	Email        string
+	FirstName    *string
+	LastName     *string
+	MiddleName   *string
 	Role         repository.UserRole
 	DepartmentID *int32
+}
+
+func (u *AuthUser) GetFullName() string {
+	if u.FirstName == nil && u.LastName == nil {
+		return u.Email
+	}
+	
+	parts := []string{}
+	if u.LastName != nil {
+		parts = append(parts, *u.LastName)
+	}
+	if u.FirstName != nil {
+		parts = append(parts, *u.FirstName)
+	}
+	if u.MiddleName != nil {
+		parts = append(parts, *u.MiddleName)
+	}
+	
+	if len(parts) == 0 {
+		return u.Email
+	}
+	
+	result := ""
+	for i, part := range parts {
+		if i > 0 {
+			result += " "
+		}
+		result += part
+	}
+	return result
 }
 
 func SetUserContext(ctx context.Context, user *AuthUser) context.Context {

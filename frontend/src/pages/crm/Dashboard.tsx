@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { Users, FileText, CheckCircle, Clock, TrendingUp, Loader2 } from "lucide-react"
 import { motion } from "motion/react"

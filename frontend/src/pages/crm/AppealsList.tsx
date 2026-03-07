@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/shared/ui/card"
+import { Input } from "@/shared/ui/input"
+import { Select } from "@/shared/ui/select"
+import { Badge } from "@/shared/ui/badge"
+import { Button } from "@/shared/ui/button"
 import { Search, Filter, AlertCircle, CheckCircle2, Clock, XCircle, MapPin, Loader2, ListTree, X, ChevronDown } from "lucide-react"
 import { motion } from "motion/react"
 import { fetchTickets, fetchCategories, Ticket, Category } from "@/api/tickets"
-import { useDebounce } from "@/hooks/useDebounce"
-import { formatDateTime } from "@/lib/dateUtils"
-import RU_LOCALIZATION from "@/lib/localization"
+import { useDebounce } from "@/shared/hooks"
+import { formatDateTime } from "@/shared/lib/date-utils"
+import RU_LOCALIZATION from "@/shared/lib/localization"
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -246,14 +246,14 @@ export default function AppealsList() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <Card className="border-0 shadow-sm bg-white/90 backdrop-blur-md rounded-2xl">
+        <Card className="border-0 shadow-sm bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl dark:border-slate-800">
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 h-5 w-5" />
                 <Input
                   placeholder={RU_LOCALIZATION.filters.searchPlaceholder}
-                  className="pl-11 h-12 bg-slate-50/50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-400 focus:ring-blue-400/20 transition-all"
+                  className="pl-11 h-12 bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400/20 dark:focus:ring-blue-500/20 transition-all text-slate-900 dark:text-slate-100"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   disabled={isLoading}
@@ -269,7 +269,7 @@ export default function AppealsList() {
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 md:pb-0 shrink-0">
                 <Select
-                  className="w-40 h-12 bg-slate-50/50 border-slate-200 rounded-xl focus:bg-white"
+                  className="w-40 h-12 bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   value={statusFilter}
                   onChange={(e: any) => setStatusFilter(e.target.value)}
                   disabled={isLoading}
@@ -281,7 +281,7 @@ export default function AppealsList() {
                   <option value="rejected">{RU_LOCALIZATION.status.rejected}</option>
                 </Select>
                 <Select
-                  className="w-48 h-12 bg-slate-50/50 border-slate-200 rounded-xl focus:bg-white"
+                  className="w-48 h-12 bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                   value={categoryFilter}
                   onChange={(e: any) => setCategoryFilter(e.target.value)}
                   disabled={isLoading}
@@ -295,7 +295,7 @@ export default function AppealsList() {
                 </Select>
                 {categoryFilter && (
                   <Select
-                    className="w-48 h-12 bg-slate-50/50 border-slate-200 rounded-xl focus:bg-white"
+                    className="w-48 h-12 bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100"
                     value={subcategoryFilter}
                     onChange={(e: any) => setSubcategoryFilter(e.target.value)}
                     disabled={isLoading}
@@ -490,7 +490,7 @@ export default function AppealsList() {
               whileHover={{ scale: 1.01, y: -2 }}
             >
               <Card
-                className="border-0 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer bg-white/90 backdrop-blur-sm group relative overflow-hidden rounded-2xl"
+                className="border-0 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 dark:hover:shadow-blue-500/20 transition-all duration-300 cursor-pointer bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm group relative overflow-hidden rounded-2xl dark:border-slate-800"
                 onClick={() => navigate(`/crm/appeals/${ticket.id}`)}
               >
                 {}
@@ -503,23 +503,29 @@ export default function AppealsList() {
                   <div className="flex flex-col sm:flex-row justify-between gap-4">
                     <div className="space-y-3 flex-1">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-sm font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">#{ticket.id.substring(0, 8)}</span>
+                        <span className="text-sm font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">#{ticket.id.substring(0, 8)}</span>
                         {getStatusBadge(ticket.status)}
-                        <Badge variant="secondary" className="bg-slate-100/80 text-slate-700 hover:bg-slate-200 border-0">{ticket.category_name}</Badge>
-                        <span className="text-sm text-slate-300">•</span>
-                        <span className="text-sm text-slate-500 font-medium flex items-center gap-1">
+                        {ticket.similarity !== null && ticket.similarity !== undefined && (
+                          <Badge className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 text-amber-800 dark:text-amber-300 border-0 shadow-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 mr-1.5 shadow-[0_0_6px_rgba(245,158,11,0.8)] animate-pulse"></span>
+                            {Math.round((1 - Number(ticket.similarity)) * 100)}% похоже
+                          </Badge>
+                        )}
+                        <Badge variant="secondary" className="bg-slate-100/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border-0">{ticket.category_name}</Badge>
+                        <span className="text-sm text-slate-300 dark:text-slate-600">•</span>
+                        <span className="text-sm text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" /> {formatDateTime(ticket.created_at)}
                         </span>
                       </div>
-                      <h3 className="text-lg font-semibold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {ticket.description}
                       </h3>
-                      <div className="flex items-center gap-6 text-sm text-slate-500">
-                        <span className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
-                          <ListTree className="w-4 h-4 text-slate-400" /> {ticket.subcategory_name}
+                      <div className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400">
+                        <span className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-100 dark:border-slate-700">
+                          <ListTree className="w-4 h-4 text-slate-400 dark:text-slate-500" /> {ticket.subcategory_name}
                         </span>
-                        <span className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
-                          <MapPin className="w-4 h-4 text-slate-400" /> {ticket.department_name || RU_LOCALIZATION.appealDetail.notAssigned}
+                        <span className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-100 dark:border-slate-700">
+                          <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" /> {ticket.department_name || RU_LOCALIZATION.appealDetail.notAssigned}
                         </span>
                       </div>
                       {ticket.tag_names && ticket.tag_names.length > 0 && (

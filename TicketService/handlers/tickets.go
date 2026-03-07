@@ -52,24 +52,27 @@ func (h *TicketHandler) Post(ctx context.Context, req *PostTicketRequest) (*Post
 
 	qtx := h.Repo.WithTx(tx)
 
-	
-	vector, err := embeddings.GetEmbedding(req.Body.Description)
+	// Extract address from description and clean the description
+	var address *string
+	cleanDescription := req.Body.Description
+	if idx := strings.Index(req.Body.Description, "\n\nАдрес: "); idx != -1 {
+		addressStr := req.Body.Description[idx+10:]
+		address = &addressStr
+		// Remove address from description for embedding
+		cleanDescription = req.Body.Description[:idx]
+	}
+
+	// Generate embedding from CLEAN description (without address)
+	vector, err := embeddings.GetEmbedding(cleanDescription)
 	if err != nil {
 		return nil, err
 	}
 
-	
+	// Prepare geo location
 	geoLocation := fmt.Sprintf("POINT(%f %f)", req.Body.Longitude, req.Body.Latitude)
 
-	
-	var address *string
-	if idx := strings.Index(req.Body.Description, "\n\nАдрес: "); idx != -1 {
-		addressStr := req.Body.Description[idx+10:]
-		address = &addressStr
-	}
-
 	result, err := qtx.CreateTicketWithDefaults(ctx, repository.CreateTicketWithDefaultsParams{
-		Description:   req.Body.Description,
+		Description:   cleanDescription, // Use clean description without address
 		SubcategoryID: req.Body.SubcategoryID,
 		DepartmentID:  req.Body.DepartmentID,
 		Embedding:     vector,
@@ -79,7 +82,7 @@ func (h *TicketHandler) Post(ctx context.Context, req *PostTicketRequest) (*Post
 	}
 	details, err := qtx.CreateComplaint(ctx, repository.CreateComplaintParams{
 		Ticket:      result.ID,
-		Description: req.Body.Description,
+		Description: req.Body.Description, // Keep full description with address in details
 		SenderName:  req.Body.SenderName,
 		SenderPhone: req.Body.SenderPhone,
 		SenderEmail: req.Body.SenderEmail,
@@ -93,7 +96,7 @@ func (h *TicketHandler) Post(ctx context.Context, req *PostTicketRequest) (*Post
 	resp.Body.Ticket = result
 	resp.Body.ComplaintDetails = details
 
-	
+	// Create history entry
 	newValue, _ := json.Marshal(map[string]interface{}{
 		"status":         result.Status,
 		"subcategory_id": result.SubcategoryID,
@@ -258,20 +261,25 @@ func (h *TicketHandler) Update(ctx context.Context, req *UpdateTicketRequest) (*
 
 	qtx := h.Repo.WithTx(tx)
 
-	
-	currentTicket, err := qtx.GetTicket(ctx, repository.GetTicketParams{ID: req.TicketID})
+	// Get current ticket with access control
+	deptFilter := internal.DepartmentFilter(ctx)
+	currentTicket, err := qtx.GetTicket(ctx, repository.GetTicketParams{
+		ID:               req.TicketID,
+		IsAdmin:          internal.IsAdmin(ctx),
+		DepartmentFilter: deptFilter,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	
+	// Prepare status update
 	var status repository.NullTicketStatus
 	if req.Body.Status != nil {
 		status.Valid = true
 		status.TicketStatus = *req.Body.Status
 	}
 
-	
+	// Update ticket
 	updateResult, err := qtx.UpdateTicketSimple(ctx, repository.UpdateTicketSimpleParams{
 		ID:           req.TicketID,
 		Status:       status,
@@ -527,5 +535,30 @@ func (h *TicketHandler) Merge(ctx context.Context, req *MergeRequest) (*MergeRes
 
 	tx.Commit(ctx)
 
+	return resp, nil
+}
+
+
+type GetSimilarRequest struct {
+	ID uuid.UUID `path:"id"`
+}
+
+type GetSimilarResponse struct {
+	Body struct {
+		Similar []repository.GetSimilarTicketsRow `json:"similar"`
+	}
+}
+
+func (h *TicketHandler) GetSimilar(ctx context.Context, req *GetSimilarRequest) (*GetSimilarResponse, error) {
+	resp := new(GetSimilarResponse)
+
+	similar, err := h.Repo.GetSimilarTickets(ctx, repository.GetSimilarTicketsParams{
+		TargetID: req.ID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resp.Body.Similar = similar
 	return resp, nil
 }
